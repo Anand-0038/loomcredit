@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">LoomCredit — Evidence before underwriting</title>
+  <desc id="desc">Attested trade evidence, bounded AI, and deterministic policy for a testnet prototype.</desc>
+  <defs>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#2b5262" stroke-opacity=".34" stroke-width="1" />
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#123447" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+  <circle cx="166" cy="188" r="110" fill="#1d4355" stroke="#47707d" stroke-opacity=".6" stroke-width="2" />
+  <path d="M113 188c0-26 29-44 53-21l10 10 10-10c24-23 53-5 53 21s-29 44-53 21l-10-10-10 10c-24 23-53 5-53-21Z" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="15" />
+  <circle cx="226" cy="133" r="10" fill="#19c6b3" />
+  <text x="330" y="158" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700" letter-spacing="-2">Loom<tspan fill="#19c6b3">Credit</tspan></text>
+  <text x="334" y="246" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="700" letter-spacing="-.8">Evidence before</text>
+  <text x="334" y="305" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="700" letter-spacing="-.8">underwriting.</text>
+  <rect x="334" y="354" width="650" height="76" rx="18" fill="#1d4355" stroke="#47707d" stroke-width="2" />
+  <text x="370" y="402" fill="#d4e1e5" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="600">Attested evidence  ·  bounded AI  ·  policy gates</text>
+  <text x="72" y="548" fill="#f4b860" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" letter-spacing="1.8">ATTESTCOIN × CREDITCOIN  ·  BUIDL CTC 2026 FALL</text>
+  <text x="72" y="584" fill="#a9c0c9" font-family="Arial, Helvetica, sans-serif" font-size="18" letter-spacing=".8">TESTNET PROTOTYPE  ·  NO REAL LENDING, CUSTODY, OR REPAYMENT CLAIMS</text>
+</svg>

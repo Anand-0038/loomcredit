@@ -1,0 +1,24 @@
+{
+  "name": "@loomcredit/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "demo:happy": "tsx src/demo.ts safe",
+    "demo:unsafe": "tsx src/demo.ts unsafe",
+    "quote": "tsx src/quote-cli.ts"
+  },
+  "dependencies": {
+    "@loomcredit/shared": "workspace:*",
+    "viem": "2.55.11",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.0",
+    "tsx": "4.22.4",
+    "typescript": "6.0.2",
+    "vitest": "4.1.10"
+  }
+}

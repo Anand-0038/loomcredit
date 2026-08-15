@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 104" role="img" aria-labelledby="title desc">
+  <title id="title">LoomCredit wordmark</title>
+  <desc id="desc">LoomCredit with a circular interwoven thread mark and the tagline Evidence to capital.</desc>
+  <circle cx="52" cy="52" r="46" fill="#123447" />
+  <path d="M29 52c0-10 11-16 19-8l4 4 4-4c8-8 19-2 19 8s-11 16-19 8l-4-4-4 4c-8 8-19 2-19-8Z" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" />
+  <circle cx="77" cy="29" r="4" fill="#19C6B3" />
+  <text x="112" y="49" fill="#123447" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="800" letter-spacing="-1.5">Loom<tspan fill="#19C6B3">Credit</tspan></text>
+  <text x="114" y="74" fill="#5D6B78" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="2.1">EVIDENCE TO CAPITAL</text>
+</svg>

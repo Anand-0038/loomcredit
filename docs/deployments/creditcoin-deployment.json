@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-08T07:22:18.433Z",
+  "gitCommit": "992530c582ffa08f4b10c4e1474aa4364f7e3417",
+  "network": "creditcoin-cc3-testnet",
+  "chainId": 102031,
+  "deployer": "0xFB76C4B6912bCF358752Fb4b4b15B959EfaDD915",
+  "agentSigner": "0xFB76C4B6912bCF358752Fb4b4b15B959EfaDD915",
+  "source": {
+    "chainKey": 1,
+    "escrowAddress": "0xc8c0C33761C89979e7a090D8B9361Ce6C6930cE4"
+  },
+  "nativeVerifier": "0x0000000000000000000000000000000000000FD2",
+  "contracts": {
+    "EvmV1Decoder": {
+      "address": "0xFc2E1fB26A6ae1Db07f3f748C9dcf2eF37Ed3795",
+      "deploymentTx": "0x35a5e09f39fc16e9d1442319eafae75f54bd135d40343d1978da1b0c44620f1a",
+      "deploymentBlock": 5272499,
+      "explorer": "https://creditcoin-testnet.blockscout.com/address/0xFc2E1fB26A6ae1Db07f3f748C9dcf2eF37Ed3795",
+      "deploymentExplorer": "https://creditcoin-testnet.blockscout.com/tx/0x35a5e09f39fc16e9d1442319eafae75f54bd135d40343d1978da1b0c44620f1a"
+    },
+    "TradeEvidenceUSC": {
+      "address": "0x1eb7Bc536aFd2cc28602d289A6F47DbDC3b9445f",
+      "deploymentTx": "0xf0828474deea336acacc5b06b3270985ae12cf679767891d30f6002347f8d3e7",
+      "deploymentBlock": 5272500,
+      "explorer": "https://creditcoin-testnet.blockscout.com/address/0x1eb7Bc536aFd2cc28602d289A6F47DbDC3b9445f",
+      "deploymentExplorer": "https://creditcoin-testnet.blockscout.com/tx/0xf0828474deea336acacc5b06b3270985ae12cf679767891d30f6002347f8d3e7"
+    },
+    "FacilityRegistry": {
+      "address": "0x8aC72a4B26e973FCdD7dAadd960Ae0eC635b4197",
+      "deploymentTx": "0x58c1310b70f05146c93e2c7dd7890c2d617342ef9e8c7ad0c3e067fb3e304127",
+      "deploymentBlock": 5272496,
+      "explorer": "https://creditcoin-testnet.blockscout.com/address/0x8aC72a4B26e973FCdD7dAadd960Ae0eC635b4197",
+      "deploymentExplorer": "https://creditcoin-testnet.blockscout.com/tx/0x58c1310b70f05146c93e2c7dd7890c2d617342ef9e8c7ad0c3e067fb3e304127"
+    },
+    "RiskGuard": {
+      "address": "0xE876276d6Ed8160e9a075FA5B651D494046078dD",
+      "deploymentTx": "0x916041069ef7973834712f90c81bb2e91f9030b699ca137c41f54d16f363eeb9",
+      "deploymentBlock": 5272498,
+      "explorer": "https://creditcoin-testnet.blockscout.com/address/0xE876276d6Ed8160e9a075FA5B651D494046078dD",
+      "deploymentExplorer": "https://creditcoin-testnet.blockscout.com/tx/0x916041069ef7973834712f90c81bb2e91f9030b699ca137c41f54d16f363eeb9"
+    },
+    "SandboxCapitalVault": {
+      "address": "0x83a8EdF32C44732D5f19af2582845Ea941Ba3854",
+      "deploymentTx": "0x757c9dee24b28d5327b0199b708a6adb78fe1f13c9950012bb6733d3f62e54fc",
+      "deploymentBlock": 5272497,
+      "explorer": "https://creditcoin-testnet.blockscout.com/address/0x83a8EdF32C44732D5f19af2582845Ea941Ba3854",
+      "deploymentExplorer": "https://creditcoin-testnet.blockscout.com/tx/0x757c9dee24b28d5327b0199b708a6adb78fe1f13c9950012bb6733d3f62e54fc"
+    }
+  },
+  "wiring": {
+    "evidenceVerifier": {
+      "transactionHash": "0x21f00397f46142300a1e3414efdcfad1a0e309ce833f31d555857b5b6468a8f6",
+      "blockNumber": 5272501,
+      "explorer": "https://creditcoin-testnet.blockscout.com/tx/0x21f00397f46142300a1e3414efdcfad1a0e309ce833f31d555857b5b6468a8f6"
+    },
+    "riskGuard": {
+      "transactionHash": "0x6d8506b3dc982112aba1188a5f8a737e35af5e65bcb07e4034bf84873e5c322e",
+      "blockNumber": 5272502,
+      "explorer": "https://creditcoin-testnet.blockscout.com/tx/0x6d8506b3dc982112aba1188a5f8a737e35af5e65bcb07e4034bf84873e5c322e"
+    },
+    "capitalVault": {
+      "transactionHash": "0x935f8541ab96849fcb0cd97429a0a5e60d1b7198243d9729532436599ab40bd7",
+      "blockNumber": 5272503,
+      "explorer": "https://creditcoin-testnet.blockscout.com/tx/0x935f8541ab96849fcb0cd97429a0a5e60d1b7198243d9729532436599ab40bd7"
+    },
+    "vaultRiskGuard": {
+      "transactionHash": "0xceefa32b27cfc1b6903a651e15bd3af305776eb3c5841a8e7d8c81a9ca6cbe17",
+      "blockNumber": 5272504,
+      "explorer": "https://creditcoin-testnet.blockscout.com/tx/0xceefa32b27cfc1b6903a651e15bd3af305776eb3c5841a8e7d8c81a9ca6cbe17"
+    },
+    "vaultFacilityRegistry": {
+      "transactionHash": "0xd8058055bd1f0e77d484c8347ca0154811045f6740810b7a8cbe96f5fb7578a6",
+      "blockNumber": 5272505,
+      "explorer": "https://creditcoin-testnet.blockscout.com/tx/0xd8058055bd1f0e77d484c8347ca0154811045f6740810b7a8cbe96f5fb7578a6"
+    },
+    "agentSigner": {
+      "transactionHash": "0xb5747297a4305884c7cd738eade19fd594dfdc3396bdc4362d339cb3f3ab0bfe",
+      "blockNumber": 5272506,
+      "explorer": "https://creditcoin-testnet.blockscout.com/tx/0xb5747297a4305884c7cd738eade19fd594dfdc3396bdc4362d339cb3f3ab0bfe"
+    }
+  },
+  "postDeploymentChecks": {
+    "evidenceVerifier": "0x1eb7Bc536aFd2cc28602d289A6F47DbDC3b9445f",
+    "riskGuard": "0xE876276d6Ed8160e9a075FA5B651D494046078dD",
+    "capitalVault": "0x83a8EdF32C44732D5f19af2582845Ea941Ba3854",
+    "vaultRiskGuard": "0xE876276d6Ed8160e9a075FA5B651D494046078dD",
+    "vaultFacilityRegistry": "0x8aC72a4B26e973FCdD7dAadd960Ae0eC635b4197"
+  },
+  "agentSignerApproved": true,
+  "sandboxLiquidityMinor": "20000000000",
+  "liquidityDeposit": {
+    "transactionHash": "0x2ab86f6653ec5a220d395cb4d649b43da7256d155f51f0fbf4fdb44f4160af50",
+    "blockNumber": 5272507,
+    "explorer": "https://creditcoin-testnet.blockscout.com/tx/0x2ab86f6653ec5a220d395cb4d649b43da7256d155f51f0fbf4fdb44f4160af50"
+  }
+}

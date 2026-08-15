@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500" role="img" aria-labelledby="title desc">
+  <title id="title">LoomCredit — Evidence before underwriting</title>
+  <desc id="desc">Attested trade evidence, bounded AI, and deterministic policy for a testnet prototype.</desc>
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0V60" fill="none" stroke="#2b5262" stroke-opacity=".34" stroke-width="1" />
+    </pattern>
+  </defs>
+  <rect width="1500" height="500" fill="#123447" />
+  <rect width="1500" height="500" fill="url(#grid)" />
+  <circle cx="190" cy="250" r="120" fill="#1d4355" stroke="#47707d" stroke-opacity=".6" stroke-width="2" />
+  <path d="M132 250c0-29 32-49 58-23l11 11 11-11c26-26 58-6 58 23s-32 49-58 23l-11-11-11 11c-26 26-58 6-58-23Z" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="16" />
+  <circle cx="255" cy="190" r="10" fill="#19c6b3" />
+  <text x="390" y="170" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="66" font-weight="700" letter-spacing="-2">Loom<tspan fill="#19c6b3">Credit</tspan></text>
+  <text x="394" y="244" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700">Evidence before underwriting.</text>
+  <text x="394" y="299" fill="#c7d7dc" font-family="Arial, Helvetica, sans-serif" font-size="25">Attested trade evidence · bounded AI · deterministic policy</text>
+  <rect x="394" y="344" width="520" height="58" rx="14" fill="#19c6b3" />
+  <text x="426" y="382" fill="#07212f" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700">BUIDL CTC 2026 FALL · TESTNET</text>
+  <text x="1050" y="464" fill="#a9c0c9" font-family="Arial, Helvetica, sans-serif" font-size="16" text-anchor="end" letter-spacing=".7">NO REAL LENDING, CUSTODY, OR REPAYMENT CLAIMS</text>
+</svg>

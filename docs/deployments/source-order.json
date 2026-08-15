@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-08T05:46:14.597Z",
+  "gitCommit": "79ff97950c193f2cb84f7233973232577c4124dc",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "sourceEscrow": "0xc8c0C33761C89979e7a090D8B9361Ce6C6930cE4",
+  "settlementToken": "0x4374DB785Ba089A443A9aBD52546178733304f0c",
+  "buyer": "0xFB76C4B6912bCF358752Fb4b4b15B959EfaDD915",
+  "supplier": "0x1234567890123456789012345678901234567890",
+  "order": {
+    "orderId": "0x2a3f897f0f2a4daae050a72cac472a0afbb20d041f69d83de72ff0ba825043f1",
+    "orderValue": "10000000000",
+    "guaranteeAmount": "2000000000",
+    "deliveryDeadline": "1789623937",
+    "termsCommitment": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "buyerIdentityCommitment": "0x2222222222222222222222222222222222222222222222222222222222222222",
+    "supplierIdentityCommitment": "0x3333333333333333333333333333333333333333333333333333333333333333",
+    "nonce": "1"
+  },
+  "transactionHash": "0x61462a792651b360e7247becafbd33b446d3fea1a3680c589adbe6625be5e70d",
+  "blockNumber": 11443299,
+  "logIndex": 1,
+  "receiptLogIndex": 1,
+  "blockLogIndex": 786,
+  "explorer": "https://sepolia.etherscan.io/tx/0x61462a792651b360e7247becafbd33b446d3fea1a3680c589adbe6625be5e70d"
+}

@@ -1,0 +1,15 @@
+packages:
+  - "shared"
+  - "agent"
+  - "worker"
+  - "web"
+allowBuilds:
+  core-js: false
+  esbuild: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - "@posthog/core@1.48.1"
+  - "@posthog/types@1.404.1"
+  - posthog-js@1.417.1
+onlyBuiltDependencies:
+  - esbuild

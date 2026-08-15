@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-08T19:09:42.160Z",
+  "gitCommit": "1c5f9628e36ce6eec98d166c937edd2db7158c1e",
+  "source": {
+    "network": "Sepolia",
+    "chainId": 11155111,
+    "escrowAddress": "0xc8c0C33761C89979e7a090D8B9361Ce6C6930cE4",
+    "transactionHash": "0x61462a792651b360e7247becafbd33b446d3fea1a3680c589adbe6625be5e70d",
+    "explorer": "https://sepolia.etherscan.io/tx/0x61462a792651b360e7247becafbd33b446d3fea1a3680c589adbe6625be5e70d",
+    "blockNumber": 11443299,
+    "txIndex": 106,
+    "receiptLogIndex": 1,
+    "blockLogIndex": 786,
+    "orderId": "0x2a3f897f0f2a4daae050a72cac472a0afbb20d041f69d83de72ff0ba825043f1"
+  },
+  "attestcoin": {
+    "sourceChainKey": 1,
+    "proofBuilder": "https://prover.cc3-testnet.creditcoin.network",
+    "proofRetrieved": true,
+    "proofReadyAt": "2026-08-08T07:25:04.993Z",
+    "stageBoundary": "worker proof response; native verification is recorded below"
+  },
+  "creditcoin": {
+    "network": "CC3",
+    "chainId": 102031,
+    "tradeEvidenceAddress": "0x1eb7Bc536aFd2cc28602d289A6F47DbDC3b9445f",
+    "tradeEvidenceExplorer": "https://creditcoin-testnet.blockscout.com/address/0x1eb7Bc536aFd2cc28602d289A6F47DbDC3b9445f",
+    "facilityRegistryAddress": "0x8aC72a4B26e973FCdD7dAadd960Ae0eC635b4197",
+    "facilityRegistryExplorer": "https://creditcoin-testnet.blockscout.com/address/0x8aC72a4B26e973FCdD7dAadd960Ae0eC635b4197",
+    "riskGuardAddress": "0xE876276d6Ed8160e9a075FA5B651D494046078dD",
+    "riskGuardExplorer": "https://creditcoin-testnet.blockscout.com/address/0xE876276d6Ed8160e9a075FA5B651D494046078dD",
+    "vaultAddress": "0x83a8EdF32C44732D5f19af2582845Ea941Ba3854",
+    "vaultExplorer": "https://creditcoin-testnet.blockscout.com/address/0x83a8EdF32C44732D5f19af2582845Ea941Ba3854",
+    "verificationTransactionHash": "0x1beddb24fc145fbb00b0d477fa008f0507d8fa8cd6c7775dd5c685f6487b81b9",
+    "verificationTransactionExplorer": "https://creditcoin-testnet.blockscout.com/tx/0x1beddb24fc145fbb00b0d477fa008f0507d8fa8cd6c7775dd5c685f6487b81b9",
+    "evidenceId": "0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9",
+    "stateReadBack": "EVIDENCE_VERIFIED"
+  },
+  "worker": {
+    "stage": "VERIFIED",
+    "retryCount": 5,
+    "stageTimestamps": {
+      "DETECTED": "2026-08-08T07:22:27.865Z",
+      "WAITING_FOR_ATTESTATION": "2026-08-08T07:24:58.295Z",
+      "PROOF_REQUESTED": "2026-08-08T07:25:04.136Z",
+      "PROOF_READY": "2026-08-08T07:25:04.993Z",
+      "FAILED_RETRYABLE": "2026-08-08T07:24:48.291Z",
+      "CREDITCOIN_SUBMITTED": "2026-08-08T07:25:20.306Z",
+      "VERIFIED": "2026-08-08T07:25:20.310Z"
+    },
+    "sourceBlock": 11443299,
+    "sourceTxIndex": 106,
+    "sourceReceiptLogIndex": 1
+  },
+  "timings": {
+    "attestationWaitMs": 5841,
+    "proofGenerationMs": 857,
+    "creditcoinSubmissionMs": 15313,
+    "verificationMs": 4,
+    "finalAttemptMs": 22015,
+    "totalMs": 172445
+  },
+  "packet": {
+    "evidenceId": "0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9",
+    "orderId": "0x2a3f897f0f2a4daae050a72cac472a0afbb20d041f69d83de72ff0ba825043f1",
+    "buyerIdentityCommitment": "0x2222222222222222222222222222222222222222222222222222222222222222",
+    "supplierIdentityCommitment": "0x3333333333333333333333333333333333333333333333333333333333333333",
+    "orderValueMinor": 10000000000,
+    "guaranteeAmountMinor": 2000000000,
+    "currency": "TEST_USD",
+    "tenorDays": 40,
+    "facilityState": "EVIDENCE_VERIFIED",
+    "buyerSettlementCount": 0,
+    "buyerDisputeCount": 0,
+    "supplierSettlementCount": 0,
+    "supplierCancellationCount": 0,
+    "openBuyerExposureMinor": 0,
+    "openSupplierExposureMinor": 0,
+    "vaultTotalLiquidityMinor": 20000000000,
+    "vaultAvailableLiquidityMinor": 20000000000,
+    "policyVersion": "2026-08-demo-v1",
+    "sourceChain": "Ethereum Sepolia",
+    "executionChain": "Creditcoin CC3 Testnet",
+    "proofStatus": "LIVE_VERIFIED"
+  },
+  "agent": {
+    "status": "NOT_RUN",
+    "provider": "https://api.openai.com/v1",
+    "model": "gpt-4.1-mini",
+    "modelVersion": null,
+    "policyVersion": "2026-08-demo-v1",
+    "decision": "REFER",
+    "advanceBps": 0
+  }
+}

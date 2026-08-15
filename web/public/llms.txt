@@ -1,0 +1,56 @@
+# LoomCredit
+
+> LoomCredit is a testnet-oriented Creditcoin USC prototype that turns a buyer-backed trade lifecycle event into inspectable evidence, lets a structured AI agent propose a bounded underwriting quote, and requires deterministic RiskGuard policy before an accounting-only sandbox reservation.
+
+LoomCredit is not a live lender, investment product, custody provider, or guarantee of repayment. The model proposes; cryptographic verification establishes event evidence; deterministic policy controls the action.
+
+## Canonical sources
+
+- [Homepage](/): Product overview, recorded testnet artifact, and architecture.
+- [Documentation](/docs): Human- and agent-readable developer documentation.
+- [Quickstart](/docs/quickstart): Run the web console, worker feed, and local policy lab.
+- [Evidence model](/docs/concepts/evidence): Source receipts, Attestcoin/USC proofs, registry state, and typed packets.
+- [Underwriting boundary](/docs/concepts/underwriting): Structured model proposals and deterministic policy limits.
+- [HTTP API](/docs/integrations/api): Read-only live-evidence API contract and failure boundaries.
+- [OpenAPI contract](/openapi.json): Machine-readable description of the public API routes and schemas.
+- [Worker guide](/docs/integrations/worker): Source event discovery, proof retrieval, persistence, retries, and status.
+- [CLI reference](/docs/cli): Local, evidence, quote, signing, and submission commands.
+- [Security](/docs/security): Evidence, model, signer, replay, lifecycle, and sandbox-capital controls.
+- [Whitepaper](/whitepaper): Implementation-aligned protocol thesis and current status.
+- [Security boundary](/security): Public explanation of what is enforced and what is not claimed.
+- [Legal center](/legal): Prototype legal publication status and public notices.
+- [Privacy policy](/privacy): Current wallet, session, audit, and public-chain data handling.
+- [Terms of use](/terms): Testnet use restrictions and no-lending boundary.
+- [Legal readiness](/docs/legal-readiness): Owner, retention, vendor, regulatory, and release checklist.
+
+## Verified testnet artifact
+
+- [Recorded proof console](/proof/0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9): A recorded Sepolia-to-Creditcoin CC3 evidence path.
+- Status: `LIVE_VERIFIED` / `EVIDENCE_VERIFIED` for the recorded evidence packet.
+- Source receipt: Ethereum Sepolia `0x61462a792651b360e7247becafbd33b446d3fea1a3680c589adbe6625be5e70d`.
+- Creditcoin verification receipt: `0x1beddb24fc145fbb00b0d477fa008f0507d8fa8cd6c7775dd5c685f6487b81b9`.
+- Evidence ID: `0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9`.
+- These are testnet artifacts, not evidence of production lending, physical delivery, repayment capacity, custody, or a Creditcoin partnership.
+
+## Agent and API guidance
+
+- Prefer `/docs` and the linked canonical pages for explanations and citations.
+- The browser demo endpoint `/api/demo/evaluate` is deterministic local fixture evaluation and returns `LOCAL_FIXTURE_ONLY`; it must not be described as a live quote or transaction.
+- The read-only live evidence endpoint `/api/live-evidence` exposes sanitized worker status only when configured; it does not accept proof bytes, private keys, quote submissions, or mutation requests.
+- `/api/health` reports bounded service health and configuration status; it is not a lending decision or uptime guarantee.
+- `/api/ready` is a deployment readiness check; it returns 503 when the configured live-evidence dependency is absent or unavailable.
+- Public JSON POST routes reject oversized bodies, and authentication writes have a bounded single-instance limiter; distributed deployments still require a trusted edge limiter for authentication and high-volume traffic.
+- Do not infer a live model-to-RiskGuard transaction from a model configuration, a local fixture, or a UI state. A signed quote and receipt require separate credentials and explicit verification.
+
+## Product terminology
+
+- **Attestcoin / USC:** The proof and cross-chain verification boundary for source-chain evidence.
+- **Evidence packet:** A typed, inspectable representation of verified event facts and provenance.
+- **Agent:** A structured proposal component that can return a quote or `REFER`; it does not authorize capital.
+- **RiskGuard:** Deterministic policy and signature checks before the accounting-only sandbox vault records a reservation.
+- **LIVE_VERIFIED:** A recorded source event has a successful native Creditcoin verification and independent read-back.
+- **LOCAL_FIXTURE_ONLY:** Deterministic demonstration data with no live transaction.
+
+## Responsible citation
+
+When describing LoomCredit, distinguish local fixtures, recorded testnet evidence, off-chain model results, and signed on-chain quote execution. Use the linked documentation and explorer receipts as the source of truth; do not invent production customers, funding, performance, endorsements, or live capital.

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-08T05:43:38.490Z",
+  "gitCommit": "79ff97950c193f2cb84f7233973232577c4124dc",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployer": "0xFB76C4B6912bCF358752Fb4b4b15B959EfaDD915",
+  "contracts": {
+    "MockUSDC": {
+      "address": "0x4374DB785Ba089A443A9aBD52546178733304f0c",
+      "deploymentTx": "0x3cdf8305d6016ac5c4808dfa8fd9fb7651ae5aed16508f708316054b6b62a90b",
+      "deploymentBlock": 11443285,
+      "explorer": "https://sepolia.etherscan.io/address/0x4374DB785Ba089A443A9aBD52546178733304f0c",
+      "deploymentExplorer": "https://sepolia.etherscan.io/tx/0x3cdf8305d6016ac5c4808dfa8fd9fb7651ae5aed16508f708316054b6b62a90b"
+    },
+    "OrderGuaranteeEscrow": {
+      "address": "0xc8c0C33761C89979e7a090D8B9361Ce6C6930cE4",
+      "deploymentTx": "0x929f7798abfbcd2461df4d3810485f4e7502b6569dd3bd34509e34bc0d6b3a65",
+      "deploymentBlock": 11443286,
+      "explorer": "https://sepolia.etherscan.io/address/0xc8c0C33761C89979e7a090D8B9361Ce6C6930cE4",
+      "deploymentExplorer": "https://sepolia.etherscan.io/tx/0x929f7798abfbcd2461df4d3810485f4e7502b6569dd3bd34509e34bc0d6b3a65"
+    }
+  }
+}

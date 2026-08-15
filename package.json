@@ -1,0 +1,49 @@
+{
+  "name": "loomcredit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Attestcoin-verified trade-credit underwriting prototype for Creditcoin.",
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev-local.mjs",
+    "build": "corepack pnpm --filter @loomcredit/web build",
+    "lint": "corepack pnpm --filter @loomcredit/web lint",
+    "typecheck": "corepack pnpm --recursive typecheck",
+    "test": "corepack pnpm --recursive test",
+    "test:contracts": "forge test --root contracts/source && forge test --root contracts/creditcoin",
+    "format:check": "prettier --check \"shared/**/*.{ts,tsx,js,mjs,json}\" \"agent/**/*.{ts,tsx,js,mjs,json}\" \"worker/**/*.{ts,tsx,js,mjs,json}\" \"web/**/*.{ts,tsx,js,mjs,css}\" \"scripts/**/*.{js,mjs,json}\" \".github/workflows/**/*.{yml,yaml}\" README.md package.json tsconfig.base.json && prettier --check --parser markdown web/public/llms.txt",
+    "worker:config": "corepack pnpm --filter @loomcredit/worker check-config",
+    "worker:process": "corepack pnpm --filter @loomcredit/worker process-tx",
+    "worker:watch": "corepack pnpm --filter @loomcredit/worker watch",
+    "worker:watch-once": "corepack pnpm --filter @loomcredit/worker exec tsx src/cli.ts watch --once",
+    "worker:status": "corepack pnpm --filter @loomcredit/worker status",
+    "deploy:source": "node scripts/deploy-source.mjs",
+    "deploy:creditcoin": "node scripts/deploy-creditcoin.mjs",
+    "seed:source-order": "node scripts/seed-source-order.mjs",
+    "build:evidence-packet": "node scripts/build-evidence-packet.mjs",
+    "evidence:manifest": "node scripts/build-demo-evidence.mjs",
+    "submission:preflight": "node scripts/submission-preflight.mjs",
+    "demo:hostile-quote": "node scripts/hostile-quote-demo.mjs",
+    "agent:quote": "corepack pnpm --filter @loomcredit/agent quote",
+    "submit:quote": "node scripts/submit-quote.mjs",
+    "demo:happy": "corepack pnpm --filter @loomcredit/agent demo:happy",
+    "demo:unsafe-agent": "corepack pnpm --filter @loomcredit/agent demo:unsafe",
+    "demo:record": "python3 scripts/record-demo.py",
+    "secret-scan": "node scripts/secret-scan.mjs",
+    "secret-scan:test": "node scripts/secret-scan-regression.mjs",
+    "public-boundary:check": "node scripts/public-boundary-check.mjs",
+    "agent-evidence:test": "node --test scripts/agent-evidence.node-test.mjs",
+    "submit-quote:test": "node --test scripts/submit-quote.node-test.mjs"
+  },
+  "devDependencies": {
+    "prettier": "3.9.4"
+  },
+  "dependencies": {
+    "@gluwa/usc-contracts": "0.1.2",
+    "@gluwa/usc-sdk": "0.18.0",
+    "ethers": "6.17.0"
+  }
+}
