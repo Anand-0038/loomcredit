@@ -1,15 +1,16 @@
 import { spawn } from "node:child_process";
+import { withoutPrivateRuntimeSecrets } from "./runtime-env.mjs";
 
 const corepack = process.platform === "win32" ? "corepack.cmd" : "corepack";
 const workspace = process.cwd();
 const environment = { ...process.env };
 
-// The web app reads .env.local, while the worker status process intentionally
-// needs only a database path. Keep local development pointed at this checkout
-// unless the operator explicitly supplies another path.
+// Keep local development pointed at this checkout unless the operator
+// explicitly supplies another path.
 if (!environment.WORKER_DATABASE_PATH?.trim()) {
   environment.WORKER_DATABASE_PATH = "./worker/data/worker.db";
 }
+const webEnvironment = withoutPrivateRuntimeSecrets(environment);
 
 const children = [];
 let shuttingDown = false;
@@ -23,10 +24,10 @@ function stop(exitCode) {
   setTimeout(() => process.exit(exitCode), 2_000).unref();
 }
 
-function start(label, args) {
+function start(label, args, childEnvironment = environment) {
   const child = spawn(corepack, args, {
     cwd: workspace,
-    env: environment,
+    env: childEnvironment,
     stdio: "inherit",
   });
   children.push(child);
@@ -49,14 +50,22 @@ process.once("SIGTERM", () => stop(0));
 console.log("[loomcredit] worker status: http://127.0.0.1:8787");
 console.log("[loomcredit] web console: http://127.0.0.1:3000");
 
-start("worker status", ["pnpm", "--filter", "@loomcredit/worker", "status"]);
-start("web console", [
-  "pnpm",
-  "--filter",
-  "@loomcredit/web",
-  "exec",
-  "next",
-  "dev",
-  "--hostname",
-  "127.0.0.1",
-]);
+start(
+  "worker status",
+  ["pnpm", "--filter", "@loomcredit/worker", "status"],
+  webEnvironment,
+);
+start(
+  "web console",
+  [
+    "pnpm",
+    "--filter",
+    "@loomcredit/web",
+    "exec",
+    "next",
+    "dev",
+    "--hostname",
+    "127.0.0.1",
+  ],
+  webEnvironment,
+);

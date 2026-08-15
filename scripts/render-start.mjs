@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { withoutPrivateRuntimeSecrets } from "./runtime-env.mjs";
 
 const corepack = process.platform === "win32" ? "corepack.cmd" : "corepack";
 const workspace = process.cwd();
@@ -21,6 +22,7 @@ if (!port || !/^\d+$/.test(port)) {
     AUTH_DATABASE_PATH:
       process.env.AUTH_DATABASE_PATH?.trim() || "/var/data/auth.sqlite",
   };
+  const webEnvironment = withoutPrivateRuntimeSecrets(environment);
 
   const children = [];
   let shuttingDown = false;
@@ -34,10 +36,10 @@ if (!port || !/^\d+$/.test(port)) {
     setTimeout(() => process.exit(exitCode), 2_000).unref();
   }
 
-  function start(label, args) {
+  function start(label, args, childEnvironment = environment) {
     const child = spawn(corepack, args, {
       cwd: workspace,
-      env: environment,
+      env: childEnvironment,
       stdio: "inherit",
     });
     children.push(child);
@@ -67,18 +69,26 @@ if (!port || !/^\d+$/.test(port)) {
     }),
   );
 
-  start("worker status", ["pnpm", "--filter", "@loomcredit/worker", "status"]);
+  start(
+    "worker status",
+    ["pnpm", "--filter", "@loomcredit/worker", "status"],
+    webEnvironment,
+  );
   start("source watcher", ["pnpm", "--filter", "@loomcredit/worker", "watch"]);
-  start("web console", [
-    "pnpm",
-    "--filter",
-    "@loomcredit/web",
-    "exec",
-    "next",
-    "start",
-    "--hostname",
-    "0.0.0.0",
-    "--port",
-    port,
-  ]);
+  start(
+    "web console",
+    [
+      "pnpm",
+      "--filter",
+      "@loomcredit/web",
+      "exec",
+      "next",
+      "start",
+      "--hostname",
+      "0.0.0.0",
+      "--port",
+      port,
+    ],
+    webEnvironment,
+  );
 }

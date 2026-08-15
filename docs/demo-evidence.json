@@ -86,8 +86,8 @@
   },
   "agent": {
     "status": "NOT_RUN",
-    "provider": "https://api.openai.com/v1",
-    "model": "gpt-4.1-mini",
+    "provider": null,
+    "model": null,
     "modelVersion": null,
     "policyVersion": "2026-08-demo-v1",
     "decision": "REFER",

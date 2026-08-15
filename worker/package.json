@@ -6,10 +6,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check-config": "tsx src/cli.ts check-config",
-    "process-tx": "tsx src/cli.ts process-tx",
-    "watch": "tsx src/cli.ts watch",
-    "status": "tsx src/cli.ts status"
+    "check-config": "node --env-file-if-exists=../.env --import=tsx src/cli.ts check-config",
+    "process-tx": "node --env-file-if-exists=../.env --import=tsx src/cli.ts process-tx",
+    "watch": "node --env-file-if-exists=../.env --import=tsx src/cli.ts watch",
+    "watch-once": "node --env-file-if-exists=../.env --import=tsx src/cli.ts watch --once",
+    "status": "node --env-file-if-exists=../.env --import=tsx src/cli.ts status"
   },
   "dependencies": {
     "@gluwa/usc-sdk": "0.18.0",
