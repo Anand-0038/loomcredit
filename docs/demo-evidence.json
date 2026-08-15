@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-15T08:53:21.479Z",
-  "gitCommit": "85ef242bc60dec94398a7e67e72cd8a4a7f23f79",
+  "generatedAt": "2026-08-15T10:52:36.877Z",
+  "gitCommit": "49f22b8fca33a04e09791a3c0f5443195c4c99bb",
   "source": {
     "network": "Sepolia",
     "chainId": 11155111,
@@ -35,7 +35,7 @@
     "verificationTransactionHash": "0x1beddb24fc145fbb00b0d477fa008f0507d8fa8cd6c7775dd5c685f6487b81b9",
     "verificationTransactionExplorer": "https://creditcoin-testnet.blockscout.com/tx/0x1beddb24fc145fbb00b0d477fa008f0507d8fa8cd6c7775dd5c685f6487b81b9",
     "evidenceId": "0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9",
-    "stateReadBack": "EVIDENCE_VERIFIED"
+    "stateReadBack": "RESERVED"
   },
   "worker": {
     "stage": "VERIFIED",
@@ -70,37 +70,54 @@
     "guaranteeAmountMinor": 2000000000,
     "currency": "TEST_USD",
     "tenorDays": 33,
-    "facilityState": "EVIDENCE_VERIFIED",
+    "facilityState": "RESERVED",
     "buyerSettlementCount": 0,
     "buyerDisputeCount": 0,
     "supplierSettlementCount": 0,
     "supplierCancellationCount": 0,
-    "openBuyerExposureMinor": 0,
-    "openSupplierExposureMinor": 0,
+    "openBuyerExposureMinor": 500000000,
+    "openSupplierExposureMinor": 500000000,
     "vaultTotalLiquidityMinor": 20000000000,
-    "vaultAvailableLiquidityMinor": 20000000000,
+    "vaultAvailableLiquidityMinor": 19500000000,
     "policyVersion": "2026-08-demo-v1",
     "sourceChain": "Ethereum Sepolia",
     "executionChain": "Creditcoin CC3 Testnet",
     "proofStatus": "LIVE_VERIFIED"
   },
   "agent": {
-    "status": "MODEL_QUOTE_VERIFIED",
-    "boundary": "LIVE_MODEL_QUOTE",
+    "status": "RISKGUARD_APPROVED",
+    "boundary": "LIVE_RISKGUARD_APPROVAL",
     "mode": "MODEL",
     "proofStatus": "LIVE_VERIFIED",
     "orderId": "0x2a3f897f0f2a4daae050a72cac472a0afbb20d041f69d83de72ff0ba825043f1",
     "evidenceId": "0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9",
     "decision": "APPROVE",
     "advanceBps": 500,
-    "feeBps": 100,
-    "expiresAt": 1786784200,
+    "feeBps": 50,
+    "expiresAt": 1786791000,
     "riskTier": "A",
     "modelVersion": "structured-agent-v1",
     "policyVersion": "2026-08-demo-v1",
     "policyDecision": "APPROVED",
     "signing": {
-      "status": "NOT_REQUESTED"
+      "status": "SIGNED",
+      "signer": "0xFB76C4B6912bCF358752Fb4b4b15B959EfaDD915",
+      "chainId": 102031,
+      "verifyingContract": "0xE876276d6Ed8160e9a075FA5B651D494046078dD",
+      "validation": "EIP712_DRY_RUN",
+      "submission": {
+        "status": "APPROVED",
+        "submitter": "0xa2085783F50466b1eC0E7D96e362c252083F3A5e",
+        "transactionHash": "0xc82bd6a141ef889d3baea6ca5e312a6c745334ddc9c26c6cab37352e115809fd",
+        "blockNumber": 5313593,
+        "explorer": "https://creditcoin-testnet.blockscout.com/tx/0xc82bd6a141ef889d3baea6ca5e312a6c745334ddc9c26c6cab37352e115809fd",
+        "amount": "500000000",
+        "quoteHash": "0x7ebbd9c1e5d86f6ba35a48aff18989d18ed4e4da531e95dd37cc2c67dbda5961",
+        "audit": {
+          "status": "NOT_AVAILABLE_ON_DEPLOYED_BYTECODE",
+          "note": "The current deployment emitted the backwards-compatible QuoteApproved event only; redeploy the updated source to record full decision terms on-chain."
+        }
+      }
     },
     "provider": "https://api.groq.com/openai/v1",
     "model": "openai/gpt-oss-120b"

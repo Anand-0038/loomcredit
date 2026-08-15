@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 
 import {
@@ -10,6 +10,7 @@ import {
   optionalEnv,
   workspaceRoot,
 } from "./deployment-utils.mjs";
+import { JsonRpcProvider } from "ethers";
 import {
   readAgentArtifact,
   summarizeAgentArtifact,
@@ -32,6 +33,53 @@ function agentQuotePath() {
     return path;
   }
   return optionalEnv("AGENT_QUOTE_PATH");
+}
+
+function riskGuardReceiptPath() {
+  const argumentIndex = process.argv.indexOf("--riskguard-receipt");
+  if (argumentIndex >= 0) {
+    const path = process.argv[argumentIndex + 1];
+    if (!path || path.startsWith("--")) {
+      throw new Error(
+        "USAGE_ERROR: --riskguard-receipt requires the JSON output from submit:quote",
+      );
+    }
+    return path;
+  }
+  return optionalEnv("RISKGUARD_RECEIPT_PATH");
+}
+
+async function receiptBlockTimestamp(path) {
+  let receipt;
+  try {
+    const absolutePath = isAbsolute(path) ? path : resolve(workspaceRoot, path);
+    receipt = JSON.parse(readFileSync(absolutePath, "utf8"));
+  } catch {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt is missing or invalid JSON",
+    );
+  }
+  if (!Number.isSafeInteger(receipt.blockNumber) || receipt.blockNumber < 1) {
+    throw new Error("EVIDENCE_INVALID: RiskGuard receipt block is invalid");
+  }
+  const rpcUrl = optionalEnv("CREDITCOIN_RPC_URL");
+  if (!rpcUrl) {
+    throw new Error(
+      "EVIDENCE_INVALID: CREDITCOIN_RPC_URL is required to date a RiskGuard receipt",
+    );
+  }
+  const provider = new JsonRpcProvider(rpcUrl);
+  try {
+    const block = await provider.getBlock(receipt.blockNumber);
+    if (!block || !Number.isSafeInteger(block.timestamp)) {
+      throw new Error(
+        "EVIDENCE_INVALID: RiskGuard receipt block timestamp is unavailable",
+      );
+    }
+    return block.timestamp;
+  } finally {
+    provider.destroy();
+  }
 }
 
 function workerDatabasePath() {
@@ -148,6 +196,105 @@ function validateSignedAgentArtifact(path, summary) {
   };
 }
 
+function readRiskGuardReceipt(path, agentSummary, riskGuardAddress) {
+  let receipt;
+  try {
+    const absolutePath = isAbsolute(path) ? path : resolve(workspaceRoot, path);
+    receipt = JSON.parse(readFileSync(absolutePath, "utf8"));
+  } catch {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt is missing or invalid JSON",
+    );
+  }
+
+  if (
+    receipt?.boundary !== "LIVE_RISKGUARD_SUBMISSION" ||
+    receipt?.status !== "APPROVED"
+  ) {
+    throw new Error(
+      "EVIDENCE_INVALID: only an APPROVED LIVE_RISKGUARD_SUBMISSION receipt may be attached",
+    );
+  }
+
+  const addressPattern = /^0x[a-fA-F0-9]{40}$/;
+  const hashPattern = /^0x[a-fA-F0-9]{64}$/;
+  if (!addressPattern.test(receipt.signer ?? "")) {
+    throw new Error("EVIDENCE_INVALID: RiskGuard receipt signer is invalid");
+  }
+  if (!addressPattern.test(receipt.submitter ?? "")) {
+    throw new Error("EVIDENCE_INVALID: RiskGuard receipt submitter is invalid");
+  }
+  if (!addressPattern.test(receipt.riskGuard ?? "")) {
+    throw new Error("EVIDENCE_INVALID: RiskGuard receipt target is invalid");
+  }
+  if (!hashPattern.test(receipt.transactionHash ?? "")) {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt transaction hash is invalid",
+    );
+  }
+  if (!hashPattern.test(receipt.quoteHash ?? "")) {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt quote hash is invalid",
+    );
+  }
+  if (!Number.isSafeInteger(receipt.blockNumber) || receipt.blockNumber < 1) {
+    throw new Error("EVIDENCE_INVALID: RiskGuard receipt block is invalid");
+  }
+  if (receipt.orderId?.toLowerCase() !== agentSummary.orderId.toLowerCase()) {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt order does not match the signed quote",
+    );
+  }
+  if (
+    receipt.evidenceId?.toLowerCase() !== agentSummary.evidenceId.toLowerCase()
+  ) {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt evidence does not match the signed quote",
+    );
+  }
+  if (
+    receipt.signer.toLowerCase() !== agentSummary.signing.signer.toLowerCase()
+  ) {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt signer does not match the signed quote",
+    );
+  }
+  if (receipt.riskGuard.toLowerCase() !== riskGuardAddress.toLowerCase()) {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt target does not match the deployment manifest",
+    );
+  }
+
+  const audit = receipt.audit;
+  if (
+    audit?.status !== "VERIFIED" &&
+    audit?.status !== "NOT_AVAILABLE_ON_DEPLOYED_BYTECODE"
+  ) {
+    throw new Error(
+      "EVIDENCE_INVALID: RiskGuard receipt audit status is unsupported",
+    );
+  }
+
+  return {
+    status: "APPROVED",
+    submitter: receipt.submitter,
+    transactionHash: receipt.transactionHash,
+    blockNumber: receipt.blockNumber,
+    explorer: receipt.explorer,
+    amount: String(receipt.amount),
+    quoteHash: receipt.quoteHash,
+    audit: {
+      status: audit.status,
+      ...(typeof audit.note === "string" ? { note: audit.note } : {}),
+      ...(audit.decision ? { decision: audit.decision } : {}),
+      ...(audit.advanceBps !== undefined
+        ? { advanceBps: audit.advanceBps }
+        : {}),
+      ...(audit.feeBps !== undefined ? { feeBps: audit.feeBps } : {}),
+    },
+  };
+}
+
 function explorer(base, hash) {
   return `${base}/tx/${hash}`;
 }
@@ -162,11 +309,13 @@ function markdown(manifest) {
 
   const agentStatus = manifest.agent.status;
   const agentBoundary =
-    agentStatus === "SIGNED_QUOTE_VERIFIED"
-      ? "A signed model quote artifact was validated against the same live evidence packet. No RiskGuard transaction is claimed until a separate submit command returns a receipt."
-      : agentStatus === "MODEL_QUOTE_VERIFIED"
-        ? "A real model response was validated against the same live evidence packet. It is an unsigned proposal; no signer or RiskGuard transaction is claimed."
-        : "The real model quote path was not run for this evidence bundle. The bundle records source and USC verification only; no model quote, signature, or RiskGuard transaction is claimed here. Run the separate agent command against a fresh LIVE_VERIFIED packet when the dedicated signer boundary is configured.";
+    agentStatus === "RISKGUARD_APPROVED"
+      ? "A signed model quote was submitted to RiskGuard and the receipt was verified against the same live order, evidence ID, signer, target, and quote hash. The deployed bytecode emitted QuoteApproved but not the newer QuoteDecisionAudited event."
+      : agentStatus === "SIGNED_QUOTE_VERIFIED"
+        ? "A signed model quote artifact was validated against the same live evidence packet. No RiskGuard transaction is claimed until a separate submit command returns a receipt."
+        : agentStatus === "MODEL_QUOTE_VERIFIED"
+          ? "A real model response was validated against the same live evidence packet. It is an unsigned proposal; no signer or RiskGuard transaction is claimed."
+          : "The real model quote path was not run for this evidence bundle. The bundle records source and USC verification only; no model quote, signature, or RiskGuard transaction is claimed here. Run the separate agent command against a fresh LIVE_VERIFIED packet when the dedicated signer boundary is configured.";
 
   return `# LoomCredit live demo evidence
 
@@ -230,6 +379,11 @@ async function main() {
   const source = await loadManifest(SOURCE_MANIFEST);
   const creditcoin = await loadManifest(CREDITCOIN_MANIFEST);
   const packet = readLivePacket();
+  const riskGuardAddress = manifestAddress(
+    creditcoin,
+    "RiskGuard",
+    CREDITCOIN_MANIFEST,
+  );
   const sourceTxHash = String(source.transactionHash);
   const worker = readVerifiedWorkerEvent(sourceTxHash);
 
@@ -242,11 +396,28 @@ async function main() {
   }
 
   const agentPath = agentQuotePath();
+  const receiptPath = riskGuardReceiptPath();
+  const historicalNow = receiptPath
+    ? await receiptBlockTimestamp(receiptPath)
+    : undefined;
   const agentSummary = agentPath
     ? validateSignedAgentArtifact(
         agentPath,
-        summarizeAgentArtifact(readAgentArtifact(agentPath), packet),
+        summarizeAgentArtifact(
+          readAgentArtifact(agentPath),
+          packet,
+          historicalNow === undefined ? {} : { now: historicalNow },
+        ),
       )
+    : null;
+  const riskGuardSubmission = receiptPath
+    ? agentSummary && agentSummary.signing.status === "SIGNED"
+      ? readRiskGuardReceipt(receiptPath, agentSummary, riskGuardAddress)
+      : (() => {
+          throw new Error(
+            "EVIDENCE_INVALID: a RiskGuard receipt requires a signed agent artifact",
+          );
+        })()
     : null;
   if (
     worker.evidenceId.toLowerCase() !== String(packet.evidenceId).toLowerCase()
@@ -265,11 +436,6 @@ async function main() {
   const facilityRegistryAddress = manifestAddress(
     creditcoin,
     "FacilityRegistry",
-    CREDITCOIN_MANIFEST,
-  );
-  const riskGuardAddress = manifestAddress(
-    creditcoin,
-    "RiskGuard",
     CREDITCOIN_MANIFEST,
   );
   const vaultAddress = manifestAddress(
@@ -351,6 +517,16 @@ async function main() {
     agent: agentSummary
       ? {
           ...agentSummary,
+          ...(riskGuardSubmission
+            ? {
+                status: "RISKGUARD_APPROVED",
+                boundary: "LIVE_RISKGUARD_APPROVAL",
+                signing: {
+                  ...agentSummary.signing,
+                  submission: riskGuardSubmission,
+                },
+              }
+            : {}),
           provider: optionalEnv("MODEL_BASE_URL") ?? null,
           model: optionalEnv("MODEL_NAME") ?? null,
         }

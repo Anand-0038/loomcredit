@@ -328,6 +328,11 @@ if (orderValueMinor && sandboxLiquidityMinor) {
 }
 
 const evidence = readJson("docs/demo-evidence.json");
+const evidenceStateIsValid =
+  evidence?.creditcoin?.stateReadBack === "EVIDENCE_VERIFIED" ||
+  (evidence?.creditcoin?.stateReadBack === "RESERVED" &&
+    evidence?.agent?.status === "RISKGUARD_APPROVED" &&
+    evidence?.agent?.signing?.submission?.status === "APPROVED");
 if (
   isRecord(evidence) &&
   evidence.schemaVersion === 1 &&
@@ -359,7 +364,7 @@ if (
   hasHash(evidence.source?.transactionHash) &&
   hasHash(evidence.creditcoin?.verificationTransactionHash) &&
   hasHash(evidence.creditcoin?.evidenceId) &&
-  evidence.creditcoin?.stateReadBack === "EVIDENCE_VERIFIED" &&
+  evidenceStateIsValid &&
   evidence.worker?.stage === "VERIFIED" &&
   evidence.packet?.proofStatus === "LIVE_VERIFIED" &&
   sameHex(evidence.packet?.evidenceId, evidence.creditcoin?.evidenceId) &&
