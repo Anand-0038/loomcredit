@@ -225,6 +225,63 @@ fields directly before an external action:
 This repository does not claim sponsorship, partnership, listing, judging
 outcomes, customer traction, or production readiness.
 
+## Render deployment
+
+The included `scripts/render-start.mjs` runs the production Next.js console,
+the read-only worker status feed, and the source-chain watcher under one Render
+web service. Only Next.js listens on Render's public `PORT`; the worker API
+stays on loopback and is proxied through `/api/live-evidence`.
+
+Use a paid Render web-service plan with a persistent disk mounted at
+`/var/data`. Render services otherwise have an ephemeral filesystem, which
+would reset worker cursors and wallet sessions after a restart. Use these
+commands:
+
+```text
+Build: corepack pnpm install --frozen-lockfile && corepack pnpm build
+Start: corepack pnpm start:render
+Health: /api/health
+Disk: /var/data (at least 1 GB)
+```
+
+Set these service variables in Render. Enter secret values in Render's
+environment editor; never paste them into the repository or chat.
+
+```text
+NEXT_PUBLIC_SITE_URL=https://<the-final-render-origin>
+AUTH_ORIGIN=https://<the-final-render-origin>
+AUTH_CHAIN_ID=11155111
+AUTH_OPERATOR_ADDRESSES=<lowercase operator wallet, optional>
+AUTH_SECURE_COOKIE=true
+AUTH_DATABASE_PATH=/var/data/auth.sqlite
+
+SOURCE_CHAIN_RPC_URL=<Sepolia RPC URL>
+CREDITCOIN_RPC_URL=https://rpc.cc3-testnet.creditcoin.network
+PROOF_BUILDER_URL=https://prover.cc3-testnet.creditcoin.network
+SOURCE_CHAIN_KEY=1
+CREDITCOIN_WALLET_PRIVATE_KEY=<funded disposable CC3 testnet worker key>
+WORKER_START_BLOCK=11443299
+WORKER_DATABASE_PATH=/var/data/worker.sqlite
+EVIDENCE_API_HOST=127.0.0.1
+EVIDENCE_API_PORT=8787
+WORKER_CONFIRMATIONS=2
+WORKER_POLL_INTERVAL_MS=15000
+```
+
+The public deployment manifests supply the source escrow and
+`TradeEvidenceUSC` addresses, so those variables can remain unset unless a
+different testnet deployment is intentionally selected. The worker key must
+be a disposable, funded testnet identity; do not reuse a deployer, source
+operator, or agent signer for a serious deployment. `MODEL_API_KEY` and
+`CREDITCOIN_AGENT_PRIVATE_KEY` are not required by the hosted UI/watcher and
+must not be added to the web runtime unless the separate quote service is
+deliberately enabled and independently reviewed.
+
+Before calling the site production-ready, configure the five `LEGAL_*`
+values, verify `/api/ready` reports a reachable live worker, and confirm that
+the public UI still labels testnet, accounting-only, and non-production
+boundaries accurately.
+
 ## Security boundary
 
 - The sandbox vault is accounting-only test liquidity; it does not hold user
