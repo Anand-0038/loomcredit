@@ -42,16 +42,18 @@ The current public tree includes:
 ## Honest status
 
 The included artifacts prove a recorded testnet path from an Ethereum Sepolia
-`OrderGuaranteed` receipt through USC verification and independent Creditcoin
-registry read-back. They do not prove production lending, physical delivery,
+`OrderGuaranteed` receipt through USC verification, a real structured model
+proposal, a separately signed quote, and an approved Creditcoin RiskGuard
+reservation in accounting-only sandbox liquidity. The public evidence manifest
+contains the approval transaction and quote hash. The deployed RiskGuard
+bytecode emitted the backwards-compatible `QuoteApproved` event but not the
+newer `QuoteDecisionAudited` event, so the full decision-term audit is not
+claimed. These artifacts do not prove production lending, physical delivery,
 repayment capacity, custody, customer adoption, or regulatory approval.
 
-The model adapter and signer path are implemented, but a model response,
-separate allowlisted agent signer, and RiskGuard transaction are runtime gates,
-not claims made by this code drop. A configured provider must be valid, and
-operator, deployer, worker, and agent wallets must be separate before a serious
-live run. Do not turn a local fixture or a fail-closed `REFER` result into a
-live-success claim.
+A configured provider must be valid, and operator, deployer, worker, and agent
+wallets must be separate before a serious live run. Do not turn a local
+fixture or a fail-closed `REFER` result into a live-success claim.
 
 Recorded public artifacts:
 
@@ -159,12 +161,19 @@ corepack pnpm --filter @loomcredit/agent quote \
   /tmp/loomcredit-evidence.json --sign > /tmp/loomcredit-signed-quote.json
 corepack pnpm submit:quote \
   /tmp/loomcredit-signed-quote.json --dry-run
+
+# After the live command returns its JSON receipt:
+corepack pnpm evidence:manifest \
+  --agent-quote /tmp/loomcredit-signed-quote.json \
+  --riskguard-receipt /tmp/loomcredit-riskguard-receipt.json
 ```
 
 `--dry-run` performs schema, chain, evidence, signer, EIP-712, policy, and
 allowlist checks without broadcasting. Run the non-dry submission command only
 with a human present after reviewing the destination, quote, nonce, expiry,
-and expected testnet mutation.
+and expected testnet mutation. The receipt-aware evidence command records only
+public transaction fields; it never copies the raw signature or model output
+into the public evidence manifest.
 
 ## Verification
 
