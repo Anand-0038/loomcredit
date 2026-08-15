@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
-import { Wallet } from "ethers";
+import { Contract, JsonRpcProvider, Wallet } from "ethers";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
@@ -189,6 +189,111 @@ if (
     "BLOCKED",
     "CC3 deployment manifest is absent or missing required contracts",
   );
+}
+
+const manifestRiskGuardAddress =
+  creditcoinDeployment?.contracts?.RiskGuard?.address;
+const configuredRiskGuardAddress =
+  process.env.RISK_GUARD_ADDRESS?.trim() || manifestRiskGuardAddress;
+const agentSignerAddress =
+  process.env.CREDITCOIN_AGENT_SIGNER_ADDRESS?.trim() ||
+  creditcoinDeployment?.agentSigner;
+if (!hasAddress(manifestRiskGuardAddress)) {
+  add(
+    "riskguard-target",
+    "BLOCKED",
+    "The deployment manifest does not contain a valid RiskGuard contract address",
+  );
+  add(
+    "agent-allowlist",
+    "BLOCKED",
+    "The RiskGuard target is invalid; the agent allowlist cannot be checked",
+  );
+} else if (!sameHex(configuredRiskGuardAddress, manifestRiskGuardAddress)) {
+  add(
+    "riskguard-target",
+    "BLOCKED",
+    "RISK_GUARD_ADDRESS does not match the deployed RiskGuard manifest address",
+  );
+  add(
+    "agent-allowlist",
+    "BLOCKED",
+    "The configured RiskGuard target does not match the deployed contract",
+  );
+} else if (!envPresent("CREDITCOIN_RPC_URL")) {
+  add(
+    "riskguard-target",
+    "BLOCKED",
+    "CREDITCOIN_RPC_URL is required to verify the deployed RiskGuard bytecode",
+  );
+  add(
+    "agent-allowlist",
+    "BLOCKED",
+    "CREDITCOIN_RPC_URL is required to verify the on-chain agent allowlist",
+  );
+} else {
+  try {
+    const provider = new JsonRpcProvider(process.env.CREDITCOIN_RPC_URL);
+    const bytecode = await provider.getCode(configuredRiskGuardAddress);
+    if (bytecode === "0x") {
+      add(
+        "riskguard-target",
+        "BLOCKED",
+        "Configured RiskGuard address has no deployed contract bytecode",
+      );
+      add(
+        "agent-allowlist",
+        "BLOCKED",
+        "The agent allowlist cannot be checked because RiskGuard has no bytecode",
+      );
+    } else {
+      add(
+        "riskguard-target",
+        "PASS",
+        "Configured RiskGuard address matches the manifest and has deployed bytecode",
+      );
+      if (!hasAddress(agentSignerAddress)) {
+        add(
+          "agent-allowlist",
+          "BLOCKED",
+          "A valid agent signer address is required for the on-chain allowlist check",
+        );
+      } else {
+        try {
+          const riskGuard = new Contract(
+            configuredRiskGuardAddress,
+            ["function approvedSigners(address) view returns (bool)"],
+            provider,
+          );
+          const approved = await riskGuard.approvedSigners(agentSignerAddress);
+          add(
+            "agent-allowlist",
+            approved ? "PASS" : "BLOCKED",
+            approved
+              ? "The configured agent signer is allowlisted by RiskGuard"
+              : "The configured agent signer is not allowlisted by RiskGuard",
+          );
+        } catch {
+          add(
+            "agent-allowlist",
+            "BLOCKED",
+            "Unable to read the RiskGuard agent allowlist from CC3",
+          );
+        }
+      }
+    }
+  } catch {
+    add(
+      "riskguard-target",
+      "BLOCKED",
+      "Unable to verify RiskGuard bytecode from the configured CC3 RPC",
+    );
+    add(
+      "agent-allowlist",
+      "BLOCKED",
+      "Unable to verify the RiskGuard agent allowlist from the configured CC3 RPC",
+    );
+  }
 }
 
 const orderValueMinor = positiveBigInt(sourceOrder?.order?.orderValue);
