@@ -2,6 +2,9 @@
 
 Evidence before underwriting.
 
+**Live testnet demo:** <https://loomcredit.onrender.com> (free Render
+service; it may sleep and its worker state is ephemeral).
+
 LoomCredit is a Creditcoin USC prototype for turning a proof-backed trade
 event into a bounded supplier-finance proposal. It is built around one
 auditable boundary:
