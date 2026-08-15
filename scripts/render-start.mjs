@@ -23,6 +23,23 @@ if (!port || !/^\d+$/.test(port)) {
       process.env.AUTH_DATABASE_PATH?.trim() || "/var/data/auth.sqlite",
   };
   const webEnvironment = withoutPrivateRuntimeSecrets(environment);
+  const workerEnvironment = {
+    ...environment,
+    EVIDENCE_API_EMBEDDED: "true",
+  };
+
+  function withHeapLimit(childEnvironment, megabytes) {
+    const existing = childEnvironment.NODE_OPTIONS?.trim();
+    return {
+      ...childEnvironment,
+      NODE_OPTIONS: [existing, `--max-old-space-size=${megabytes}`]
+        .filter(Boolean)
+        .join(" "),
+    };
+  }
+
+  const boundedWebEnvironment = withHeapLimit(webEnvironment, 256);
+  const boundedWorkerEnvironment = withHeapLimit(workerEnvironment, 128);
 
   const children = [];
   let shuttingDown = false;
@@ -66,15 +83,15 @@ if (!port || !/^\d+$/.test(port)) {
       evidenceApi: `http://127.0.0.1:${statusPort}`,
       workerDatabasePath: environment.WORKER_DATABASE_PATH,
       authDatabasePath: environment.AUTH_DATABASE_PATH,
+      statusApiMode: "embedded-in-worker",
     }),
   );
 
   start(
-    "worker status",
-    ["pnpm", "--filter", "@loomcredit/worker", "status"],
-    webEnvironment,
+    "source watcher",
+    ["pnpm", "--filter", "@loomcredit/worker", "watch"],
+    boundedWorkerEnvironment,
   );
-  start("source watcher", ["pnpm", "--filter", "@loomcredit/worker", "watch"]);
   start(
     "web console",
     [
@@ -89,6 +106,6 @@ if (!port || !/^\d+$/.test(port)) {
       "--port",
       port,
     ],
-    webEnvironment,
+    boundedWebEnvironment,
   );
 }

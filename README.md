@@ -236,21 +236,25 @@ outcomes, customer traction, or production readiness.
 
 ## Render deployment
 
-The included `scripts/render-start.mjs` runs the production Next.js console,
-the read-only worker status feed, and the source-chain watcher under one Render
-web service. Only Next.js listens on Render's public `PORT`; the worker API
-stays on loopback and is proxied through `/api/live-evidence`.
+The included `scripts/render-start.mjs` runs the production Next.js console and
+the source-chain watcher under one Render web service. The watcher embeds the
+read-only status API in the same worker process; only Next.js listens on
+Render's public `PORT`, and the worker API stays on loopback and is proxied
+through `/api/live-evidence`.
 
-Use a paid Render web-service plan with a persistent disk mounted at
-`/var/data`. Render services otherwise have an ephemeral filesystem, which
-would reset worker cursors and wallet sessions after a restart. Use these
-commands:
+For a durable deployment, use a paid Render web-service plan with a persistent
+disk mounted at `/var/data`. Render services otherwise have an ephemeral
+filesystem, which can reset worker cursors and wallet sessions after a restart.
+For a free testnet demo, use `/tmp` paths and label the service as ephemeral;
+it is suitable for a live judge walkthrough while the service is awake, not
+for durable production operation. Use these commands:
 
 ```text
 Build: corepack pnpm install --frozen-lockfile && corepack pnpm build
 Start: corepack pnpm start:render
 Health: /api/health
-Disk: /var/data (at least 1 GB)
+Durable disk: /var/data (at least 1 GB, paid plan)
+Free demo paths: /tmp/worker.sqlite and /tmp/auth.sqlite
 ```
 
 Set these service variables in Render. Enter secret values in Render's

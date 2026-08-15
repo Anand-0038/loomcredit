@@ -58,7 +58,19 @@ async function watchSource(once: boolean): Promise<number> {
     return 1;
   }
   const watcher = new SourceEventWatcher(config, store);
+  let statusServer: Awaited<ReturnType<typeof startStatusServer>> | undefined;
   try {
+    if (process.env.EVIDENCE_API_EMBEDDED === "true") {
+      statusServer = await startStatusServer(store, loadStatusServerOptions());
+      console.log(
+        JSON.stringify({
+          boundary: "LIVE_EVIDENCE_STATUS_API",
+          status: "listening",
+          address: statusServer.address(),
+          embedded: true,
+        }),
+      );
+    }
     if (once) {
       console.log(JSON.stringify(await watcher.scanOnce(), null, 2));
       return 0;
@@ -69,6 +81,10 @@ async function watchSource(once: boolean): Promise<number> {
     console.error(`WATCH_FAILED: ${errorMessage(error)}`);
     return 1;
   } finally {
+    const server = statusServer;
+    if (server) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
     watcher.close();
     store.close();
   }
