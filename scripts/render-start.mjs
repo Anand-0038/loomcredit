@@ -21,6 +21,8 @@ if (!port || !/^\d+$/.test(port)) {
       process.env.WORKER_DATABASE_PATH?.trim() || "/var/data/worker.sqlite",
     AUTH_DATABASE_PATH:
       process.env.AUTH_DATABASE_PATH?.trim() || "/var/data/auth.sqlite",
+    CASE_DATABASE_PATH:
+      process.env.CASE_DATABASE_PATH?.trim() || "/var/data/cases.sqlite",
   };
   const webEnvironment = withoutPrivateRuntimeSecrets(environment);
   const workerEnvironment = {

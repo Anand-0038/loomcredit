@@ -23,4 +23,7 @@ contracts/**/broadcast/
 lib/
 !web/lib/
 !web/lib/**
+.playwright-cli/
+web/AGENTS.md
+web/CLAUDE.md
 !.keep

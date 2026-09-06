@@ -1,0 +1,91 @@
+# LoomCredit's hosted prototype runs the web console and source worker in one
+# service so the worker status API stays loopback-only. The disk is required:
+# SQLite state must survive restarts and deploys.
+services:
+  - type: web
+    name: loomcredit
+    runtime: node
+    plan: starter
+    region: singapore
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm build
+    startCommand: corepack pnpm start:render
+    healthCheckPath: /api/ready
+    disk:
+      name: loomcredit-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: NEXT_PUBLIC_ANALYTICS_ENABLED
+        value: "false"
+      - key: NEXT_PUBLIC_POSTHOG_HOST
+        value: https://eu.i.posthog.com
+      - key: NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
+        sync: false
+      - key: LEGAL_ENTITY_NAME
+        sync: false
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false
+      - key: LEGAL_ENTITY_ADDRESS
+        sync: false
+      - key: LEGAL_GOVERNING_LAW
+        sync: false
+      - key: LEGAL_EFFECTIVE_DATE
+        sync: false
+      - key: LIVE_EVIDENCE_API_URL
+        value: http://127.0.0.1:8787
+      - key: AUTH_ORIGIN
+        sync: false
+      - key: AUTH_CHAIN_ID
+        value: "11155111"
+      - key: AUTH_DATABASE_PATH
+        value: /var/data/auth.sqlite
+      - key: CASE_DATABASE_PATH
+        value: /var/data/cases.sqlite
+      - key: AUTH_NONCE_TTL_SECONDS
+        value: "300"
+      - key: AUTH_SESSION_TTL_SECONDS
+        value: "28800"
+      - key: AUTH_OPERATOR_ADDRESSES
+        sync: false
+      - key: AUTH_SECURE_COOKIE
+        value: "true"
+      - key: SOURCE_CHAIN_RPC_URL
+        sync: false
+      - key: CREDITCOIN_RPC_URL
+        sync: false
+      - key: PROOF_BUILDER_URL
+        sync: false
+      - key: SOURCE_CHAIN_KEY
+        value: "1"
+      - key: SOURCE_DEPLOYMENT_MANIFEST
+        value: ./docs/deployments/source-deployment.json
+      - key: CREDITCOIN_DEPLOYMENT_MANIFEST
+        value: ./docs/deployments/creditcoin-deployment.json
+      - key: WORKER_START_BLOCK
+        sync: false
+      - key: WORKER_CONFIRMATIONS
+        value: "2"
+      - key: WORKER_POLL_INTERVAL_MS
+        value: "15000"
+      - key: CREDITCOIN_WALLET_PRIVATE_KEY
+        sync: false
+      - key: WORKER_DATABASE_PATH
+        value: /var/data/worker.sqlite
+      - key: EVIDENCE_API_HOST
+        value: 127.0.0.1
+      - key: EVIDENCE_API_PORT
+        value: "8787"
+      - key: CREDITCOIN_CHAIN_ID
+        value: "102031"
+      - key: MODEL_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: MODEL_API_KEY
+        sync: false
+      - key: MODEL_NAME
+        value: openai/gpt-oss-120b

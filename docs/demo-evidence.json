@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-15T11:03:34.436Z",
-  "gitCommit": "ead8c07cfe991d415858ac53a929c0f2dde2156a",
+  "generatedAt": "2026-08-15T10:51:40.336Z",
+  "gitCommit": "1c5f9628e36ce6eec98d166c937edd2db7158c1e",
   "source": {
     "network": "Sepolia",
     "chainId": 11155111,
@@ -69,6 +69,7 @@
     "orderValueMinor": 10000000000,
     "guaranteeAmountMinor": 2000000000,
     "currency": "TEST_USD",
+    "deliveryDeadline": 1789623937,
     "tenorDays": 33,
     "facilityState": "RESERVED",
     "buyerSettlementCount": 0,
