@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import {
@@ -19,7 +19,9 @@ type LiveOrder = {
   sourceEventKey?: string;
   sourceTxHash: string;
   sourceChainKey?: number;
+  provenance?: "WORKER_LIVE" | "RECORDED_TESTNET";
   orderId: string;
+  eventType: string;
   txIndex?: number | null;
   logIndex?: number;
   stage: string;
@@ -39,21 +41,56 @@ type LiveOrdersResponse = {
 
 type FeedState =
   | { status: "disabled" }
-  | { status: "loading" }
-  | { status: "ready"; orders: LiveOrder[] }
+  | { status: "loading"; attempt: number }
+  | { status: "retrying"; attempt: number }
+  | {
+      status: "ready";
+      orders: LiveOrder[];
+      stale?: boolean;
+      refreshing?: boolean;
+    }
   | { status: "error" };
 
 const liveEvidenceEndpoint = "/api/live-evidence";
+const MAX_AUTO_RETRIES = 2;
+const RETRY_DELAYS_MS = [750, 1_500];
 
 export function LiveEvidencePanel() {
-  const [state, setState] = useState<FeedState>({ status: "loading" });
+  const [state, setState] = useState<FeedState>({
+    status: "loading",
+    attempt: 1,
+  });
   const [refreshToken, setRefreshToken] = useState(0);
+  const lastKnownGoodRef = useRef<LiveOrder[] | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    let retryTimer: number | undefined;
+    const lastKnownGood = lastKnownGoodRef.current;
+
+    if (lastKnownGood) {
+      setState({
+        status: "ready",
+        orders: lastKnownGood,
+        refreshing: true,
+      });
+    } else {
+      setState({ status: "loading", attempt: 1 });
+    }
+
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8_000);
 
-    void (async () => {
+    async function load(attempt: number): Promise<void> {
+      if (cancelled) return;
+      if (attempt > 0) {
+        setState({ status: "retrying", attempt: attempt + 1 });
+        await new Promise<void>((resolve) => {
+          retryTimer = window.setTimeout(resolve, RETRY_DELAYS_MS[attempt - 1]);
+        });
+        if (cancelled) return;
+      }
+
       try {
         const response = await fetch(liveEvidenceEndpoint, {
           signal: controller.signal,
@@ -62,6 +99,7 @@ export function LiveEvidencePanel() {
         const body: unknown = await response.json();
 
         if (isLiveEvidenceError(body, "NOT_CONFIGURED")) {
+          if (cancelled) return;
           setState({ status: "disabled" });
           captureAnalytics({
             name: "loomcredit_feed_status_viewed",
@@ -70,8 +108,14 @@ export function LiveEvidencePanel() {
           return;
         }
         if (!response.ok || !isLiveOrdersResponse(body)) {
+          if (attempt < MAX_AUTO_RETRIES) {
+            await load(attempt + 1);
+            return;
+          }
           throw new Error("Live evidence response was invalid");
         }
+        if (cancelled) return;
+        lastKnownGoodRef.current = body.orders;
         setState({ status: "ready", orders: body.orders });
         captureAnalytics({
           name: "loomcredit_feed_status_viewed",
@@ -80,7 +124,20 @@ export function LiveEvidencePanel() {
           },
         });
       } catch {
-        setState({ status: "error" });
+        if (cancelled) return;
+        if (attempt < MAX_AUTO_RETRIES) {
+          await load(attempt + 1);
+          return;
+        }
+        if (lastKnownGood) {
+          setState({
+            status: "ready",
+            orders: lastKnownGood,
+            stale: true,
+          });
+        } else {
+          setState({ status: "error" });
+        }
         captureAnalytics({
           name: "loomcredit_feed_status_viewed",
           properties: { status: "unavailable" },
@@ -88,9 +145,13 @@ export function LiveEvidencePanel() {
       } finally {
         window.clearTimeout(timeout);
       }
-    })();
+    }
+
+    void load(0);
 
     return () => {
+      cancelled = true;
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
       window.clearTimeout(timeout);
       controller.abort();
     };
@@ -101,9 +162,13 @@ export function LiveEvidencePanel() {
       ? "NOT CONFIGURED"
       : state.status === "loading"
         ? "CONNECTING"
-        : state.status === "error"
-          ? "UNAVAILABLE"
-          : "CONNECTED";
+        : state.status === "retrying"
+          ? `RETRYING ${state.attempt}/${MAX_AUTO_RETRIES + 1}`
+          : state.status === "ready" && state.stale
+            ? "LAST KNOWN GOOD"
+            : state.status === "error"
+              ? "UNAVAILABLE"
+              : "CONNECTED";
 
   return (
     <section
@@ -125,9 +190,9 @@ export function LiveEvidencePanel() {
           </div>
           <h2 id="live-evidence-title">Live evidence, when it exists.</h2>
           <p>
-            Only records persisted by the worker appear here. A live record
-            needs its source receipt and, after verification, its Creditcoin
-            receipt.
+            The worker persists observed records here. A recovered record is
+            explicitly labeled when it comes from the bundled, verified testnet
+            receipt rather than the current worker watch cycle.
           </p>
         </div>
         <div className="live-evidence-heading-actions">
@@ -142,7 +207,7 @@ export function LiveEvidencePanel() {
               });
               setRefreshToken((token) => token + 1);
             }}
-            disabled={state.status === "loading"}
+            disabled={state.status === "loading" || state.status === "retrying"}
             aria-label="Refresh testnet evidence feed"
           >
             <ArrowsClockwise
@@ -173,10 +238,14 @@ export function LiveEvidencePanel() {
             </span>
           </div>
         </div>
-      ) : state.status === "loading" ? (
+      ) : state.status === "loading" || state.status === "retrying" ? (
         <div className="live-evidence-empty" role="status" aria-live="polite">
           <CircleNotch className="spin" size={18} aria-hidden="true" />
-          <span>Reading the worker status feed…</span>
+          <span>
+            {state.status === "retrying"
+              ? "Worker is waking up; retrying the status feed…"
+              : "Reading the worker status feed…"}
+          </span>
         </div>
       ) : state.status === "error" ? (
         <div
@@ -193,29 +262,53 @@ export function LiveEvidencePanel() {
           </div>
         </div>
       ) : state.orders.length === 0 ? (
-        <div className="live-evidence-empty" role="status" aria-live="polite">
-          <div>
-            <strong>Worker connected; no records yet.</strong>
-            <span>
-              Real source events will appear after the watcher persists them. No
-              fixture is inserted into this feed.
-            </span>
+        <>
+          {state.stale ? <StaleFeedNotice /> : null}
+          <div className="live-evidence-empty" role="status" aria-live="polite">
+            <div>
+              <strong>
+                {state.stale
+                  ? "Last validated feed contained no records."
+                  : "Worker connected; no records yet."}
+              </strong>
+              <span>
+                Source events appear after the watcher persists them. A bundled
+                cryptographically verified testnet receipt may also recover at
+                startup and is always labeled as recorded evidence.
+              </span>
+            </div>
           </div>
-        </div>
+        </>
       ) : (
-        <div className="live-evidence-list">
-          {state.orders.map((order, index) => (
-            <LiveOrderRow
-              key={
-                order.sourceEventKey ?? `${order.sourceTxHash}:${order.orderId}`
-              }
-              order={order}
-              index={index}
-            />
-          ))}
-        </div>
+        <>
+          {state.stale ? <StaleFeedNotice /> : null}
+          <div className="live-evidence-list">
+            {state.orders.map((order, index) => (
+              <LiveOrderRow
+                key={
+                  order.sourceEventKey ??
+                  `${order.sourceTxHash}:${order.orderId}`
+                }
+                order={order}
+                index={index}
+              />
+            ))}
+          </div>
+        </>
       )}
     </section>
+  );
+}
+
+function StaleFeedNotice() {
+  return (
+    <div className="live-evidence-stale" role="status">
+      <strong>LAST_KNOWN_GOOD</strong>
+      <span>
+        The worker could not be reached after retries. Showing the last
+        validated response in this browser session; no new evidence is inferred.
+      </span>
+    </div>
   );
 }
 
@@ -241,7 +334,7 @@ function LiveOrderRow({ order, index }: { order: LiveOrder; index: number }) {
           <span className="live-evidence-row-index" aria-hidden="true">
             {String(index + 1).padStart(2, "0")}
           </span>
-          <strong>Order evidence</strong>
+          <strong>{formatEventType(order.eventType)}</strong>
         </div>
         <span
           className={`live-evidence-status${verified ? " verified" : failed ? " failed" : ""}`}
@@ -250,6 +343,14 @@ function LiveOrderRow({ order, index }: { order: LiveOrder; index: number }) {
         </span>
       </div>
       <dl className="live-evidence-fields">
+        <div>
+          <dt>Record origin</dt>
+          <dd>
+            {order.provenance === "RECORDED_TESTNET"
+              ? "Recorded testnet proof"
+              : "Current worker record"}
+          </dd>
+        </div>
         <div>
           <dt>Order ID</dt>
           <dd className="mono">{shortHash(order.orderId)}</dd>
@@ -343,6 +444,14 @@ function formatStage(stage: string): string {
     .join(" ");
 }
 
+function formatEventType(eventType: string): string {
+  return eventType
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function formatTimestamp(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Recorded";
@@ -380,7 +489,14 @@ function isLiveOrder(value: unknown): value is LiveOrder {
     typeof candidate.sourceTxHash === "string" &&
     (candidate.sourceChainKey === undefined ||
       typeof candidate.sourceChainKey === "number") &&
+    (candidate.provenance === undefined ||
+      candidate.provenance === "WORKER_LIVE" ||
+      candidate.provenance === "RECORDED_TESTNET") &&
     typeof candidate.orderId === "string" &&
+    (candidate.eventType === "ORDER_GUARANTEED" ||
+      candidate.eventType === "ORDER_CANCELLED" ||
+      candidate.eventType === "ORDER_DISPUTED" ||
+      candidate.eventType === "ORDER_SETTLED") &&
     (candidate.txIndex === undefined ||
       typeof candidate.txIndex === "number" ||
       candidate.txIndex === null) &&

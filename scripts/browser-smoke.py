@@ -1,11 +1,23 @@
+import json
 import os
 import shutil
+from pathlib import Path
 from playwright.sync_api import Page, sync_playwright
 
 
-BASE_URL = "http://localhost:3000"
+BASE_URL = os.environ.get("LOOMCREDIT_BASE_URL", "http://localhost:3000").rstrip(
+    "/"
+)
+EXPECTED_SITE_URL = os.environ.get("LOOMCREDIT_SITE_URL", BASE_URL).rstrip("/")
+EVIDENCE_MANIFEST = json.loads(
+    (Path(__file__).resolve().parent.parent / "docs/demo-evidence.json").read_text()
+)
+LIVE_EVIDENCE_ID = EVIDENCE_MANIFEST["creditcoin"]["evidenceId"]
+RECORDED_SOURCE_TX_HASH = EVIDENCE_MANIFEST["source"]["transactionHash"]
 ROUTES = [
     "/",
+    "/review",
+    "/cases",
     "/demo",
     "/security",
     "/docs",
@@ -89,26 +101,32 @@ def main() -> None:
         page = context.new_page()
         console_errors: list[str] = []
         page_errors: list[str] = []
-        expected_live_evidence_unavailable = 0
+        error_responses: list[str] = []
+        expected_resource_failures = 0
 
         def record_response(response) -> None:
-            nonlocal expected_live_evidence_unavailable
-            if response.url.endswith("/api/live-evidence") and response.status in {
-                502,
-                503,
-            }:
-                expected_live_evidence_unavailable += 1
+            nonlocal expected_resource_failures
+            expected = response.status == 401 and response.url.endswith("/api/cases")
+            expected = expected or (
+                response.url.endswith("/api/live-evidence")
+                and response.status in {502, 503}
+            )
+            if response.status >= 400:
+                if expected:
+                    expected_resource_failures += 1
+                else:
+                    error_responses.append(f"{response.status} {response.url}")
 
         def record_console(message) -> None:
-            nonlocal expected_live_evidence_unavailable
+            nonlocal expected_resource_failures
             if message.type != "error":
                 return
             if (
-                expected_live_evidence_unavailable > 0
+                expected_resource_failures > 0
                 and message.text.startswith("Failed to load resource:")
-                and "status of 50" in message.text
+                and ("status of 401" in message.text or "status of 50" in message.text)
             ):
-                expected_live_evidence_unavailable -= 1
+                expected_resource_failures -= 1
                 return
             console_errors.append(message.text)
 
@@ -141,6 +159,12 @@ def main() -> None:
         page.get_by_text("Claims carry a status, not a costume.").wait_for()
         page.locator("#abstract").wait_for()
         page.get_by_text("Current product truth:", exact=False).wait_for()
+        whitepaper_pdf = context.request.get(BASE_URL + "/whitepaper.pdf")
+        assert whitepaper_pdf.ok
+        assert whitepaper_pdf.headers.get("content-type", "").startswith(
+            "application/pdf"
+        )
+        assert len(whitepaper_pdf.body()) > 100_000
 
         page.goto(BASE_URL + "/docs/quickstart", wait_until="networkidle")
         page.get_by_text("Run LoomCredit locally", exact=True).wait_for()
@@ -150,11 +174,13 @@ def main() -> None:
         docs_search = page.get_by_role("searchbox", name="Search documentation")
         docs_search.fill("worker")
         assert page.locator(".docs-nav-group a").count() >= 1
+        docs_search.fill("nonce")
+        assert page.get_by_role("link", name="HTTP API").count() == 1
         docs_search.fill("")
 
         page.goto(BASE_URL + "/", wait_until="networkidle")
         assert "Attested trade evidence for bounded underwriting" in page.title()
-        assert page.locator("link[rel='canonical']").get_attribute("href") == "http://localhost:3000"
+        assert page.locator("link[rel='canonical']").get_attribute("href") == EXPECTED_SITE_URL
         assert page.get_by_role("link", name="Legal center").count() >= 1
         assert page.locator("details.faq-row").count() == 4
         assert page.locator("meta[name='llms-txt']").get_attribute("content") == "/llms.txt"
@@ -172,6 +198,57 @@ def main() -> None:
         assert root_response.headers.get("permissions-policy") == (
             "camera=(), microphone=(), geolocation=(), payment=()"
         )
+        assert "default-src 'self'" in root_response.headers.get(
+            "content-security-policy", ""
+        )
+        assert "frame-ancestors 'none'" in root_response.headers.get(
+            "content-security-policy", ""
+        )
+
+        page.goto(BASE_URL + "/review", wait_until="networkidle")
+        page.get_by_role(
+            "heading", name="Verify the order behind a financing request.", exact=True
+        ).wait_for()
+        page.get_by_role(
+            "heading",
+            name="Need a known proof to orient yourself?",
+            exact=True,
+        ).wait_for()
+        live_case_box = page.locator("section.live-case-intake").bounding_box()
+        recorded_example_box = page.locator(
+            "section.review-recorded-example"
+        ).bounding_box()
+        assert live_case_box and recorded_example_box
+        assert live_case_box["y"] < recorded_example_box["y"]
+        assert page.get_by_role("link", name="Open wallet access", exact=True).count() == 1
+        source_input = page.get_by_label("Source transaction")
+        page.get_by_role("button", name="Use recorded testnet receipt").click()
+        assert source_input.input_value() == RECORDED_SOURCE_TX_HASH
+        source_input.fill("0x1234")
+        page.get_by_role("button", name="Verify & register evidence").click()
+        page.get_by_text(
+            "Enter a 32-byte source transaction hash, an advance from 0–100%, and delivery from 0–365 days.",
+            exact=True,
+        ).wait_for()
+
+        page.goto(BASE_URL + "/cases", wait_until="networkidle")
+        page.get_by_role(
+            "heading", name="Keep every evidence review in reach.", exact=True
+        ).wait_for()
+        page.get_by_text(
+            "Sign in as an operator to see your cases.", exact=True
+        ).wait_for()
+        page.get_by_role("button", name="Refresh cases").click()
+
+        page.goto(BASE_URL + f"/proof/{LIVE_EVIDENCE_ID}", wait_until="networkidle")
+        page.get_by_role(
+            "heading", name="The action boundary is inspectable.", exact=True
+        ).wait_for()
+        receipt = page.locator(".recorded-decision-receipt")
+        receipt.get_by_text("Recorded · no capital moved", exact=True).wait_for()
+        receipt.get_by_text("EIP-712 signer boundary", exact=True).wait_for()
+        receipt.get_by_text("SANDBOX_RESERVED", exact=True).wait_for()
+        assert receipt.locator(".recorded-decision-step").count() == 5
 
         page.set_viewport_size({"width": 390, "height": 844})
         page.reload(wait_until="networkidle")
@@ -180,6 +257,7 @@ def main() -> None:
         assert_no_horizontal_overflow(page)
 
         page.goto(BASE_URL + "/demo", wait_until="networkidle")
+        page.get_by_role("link", name="Start a real case review", exact=True).wait_for()
         mode_buttons = page.locator("button.mode-button")
         assert mode_buttons.count() == 3
         mode_buttons.nth(1).click()
@@ -187,6 +265,8 @@ def main() -> None:
         assert page.get_by_text("80% / 40%").count() == 1
         assert page.get_by_text("Decision trace", exact=True).count() == 1
         assert page.get_by_text("NOT_REQUESTED", exact=True).count() == 1
+        assert page.get_by_text("Request ID", exact=True).count() == 1
+        assert page.get_by_text("LOCAL_FIXTURE_ONLY", exact=True).count() >= 2
         mode_buttons.nth(2).click()
         page.get_by_text("Policy rejected").wait_for()
         assert page.locator(".check-row.fail").count() == 1
@@ -255,6 +335,10 @@ def main() -> None:
         assert openapi_body["openapi"] == "3.1.0"
         assert "/api/live-evidence" in openapi_body["paths"]
         assert "/api/auth/verify" in openapi_body["paths"]
+        assert "/api/cases" in openapi_body["paths"]
+        assert "get" in openapi_body["paths"]["/api/cases"]
+        assert "CaseListResponse" in str(openapi_body["components"]["schemas"])
+        assert "/api/cases/{caseId}" in openapi_body["paths"]
         assert "/api/demo/evaluate" in openapi_body["paths"]
         assert "LOCAL_FIXTURE_ONLY" in str(openapi_body)
 
@@ -274,7 +358,10 @@ def main() -> None:
 
         browser.close()
 
-    assert not console_errors, f"Browser console errors: {console_errors}"
+    assert not console_errors, (
+        f"Browser console errors: {console_errors}; "
+        f"error responses: {error_responses}"
+    )
     assert not page_errors, f"Browser page errors: {page_errors}"
     print("browser smoke: routes, responsive layout, demo interaction, APIs, and console checks passed")
 

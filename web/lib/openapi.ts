@@ -4,7 +4,7 @@ export const openApiDocument = {
     title: "LoomCredit public web API",
     version: "0.1.0",
     description:
-      "Read-only testnet evidence, deterministic local policy evaluation, health, and wallet-authentication endpoints. This API does not issue loans, custody funds, submit blockchain transactions from the browser, or expose worker credentials.",
+      "Testnet evidence, authenticated source-case intake, deterministic local policy evaluation, health, and wallet-authentication endpoints. This API does not issue loans, custody funds, submit quote transactions from the browser, or expose worker credentials.",
   },
   servers: [{ url: "/", description: "The deployed LoomCredit web origin" }],
   externalDocs: {
@@ -16,6 +16,11 @@ export const openApiDocument = {
     {
       name: "Evidence",
       description: "Sanitized, read-only worker evidence status.",
+    },
+    {
+      name: "Cases",
+      description:
+        "Authenticated source transaction intake and durable evidence status.",
     },
     {
       name: "Local demo",
@@ -117,6 +122,187 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/cases": {
+      get: {
+        tags: ["Cases"],
+        operationId: "listFinanceCases",
+        summary: "List caller-owned financing cases",
+        description:
+          "Returns the latest status for cases created by the authenticated operator account. Each summary includes proposal availability and the latest human review outcome for queue triage; it never exposes another account's cases.",
+        security: [{ sessionCookie: [] }],
+        responses: {
+          "200": {
+            description:
+              "Caller-owned case summaries ordered by recent activity.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CaseListResponse" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+        },
+      },
+      post: {
+        tags: ["Cases"],
+        operationId: "createFinanceCase",
+        summary: "Start live source evidence intake",
+        description:
+          "Creates a caller-owned financing case and asks the loopback-only worker to inspect the configured source escrow transaction. Requested terms are stored as case inputs and are never treated as source evidence. The worker may submit the USC verification transaction on CC3 testnet; this route does not submit a quote or move capital.",
+        security: [{ sessionCookie: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateCaseRequest" },
+              examples: {
+                sourceOrder: {
+                  value: {
+                    sourceTxHash: "0x…",
+                    requestedAdvanceBps: 3_000,
+                    deliveryDays: 30,
+                    role: "lender",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "202": {
+            description: "Case accepted for durable worker processing.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CaseResponse" },
+              },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "409": { $ref: "#/components/responses/Conflict" },
+          "429": { $ref: "#/components/responses/RateLimited" },
+          "502": { $ref: "#/components/responses/UpstreamError" },
+          "503": { $ref: "#/components/responses/UpstreamError" },
+        },
+      },
+    },
+    "/api/cases/{caseId}": {
+      get: {
+        tags: ["Cases"],
+        operationId: "getFinanceCase",
+        summary: "Read caller-owned case and worker status",
+        security: [{ sessionCookie: [] }],
+        parameters: [
+          {
+            name: "caseId",
+            in: "path",
+            required: true,
+            schema: { type: "string", minLength: 16, maxLength: 80 },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Case inputs and sanitized live worker status.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CaseResponse" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "404": { $ref: "#/components/responses/BadRequest" },
+          "502": { $ref: "#/components/responses/UpstreamError" },
+          "503": { $ref: "#/components/responses/UpstreamError" },
+        },
+      },
+    },
+    "/api/cases/{caseId}/proposal": {
+      post: {
+        tags: ["Cases"],
+        operationId: "createBoundedProposal",
+        summary: "Generate a server-side evidence-bound proposal",
+        description:
+          "Builds a fresh packet from a completed native verification and evaluates it with the configured structured model and deterministic policy. Terms are read from the caller-owned case; the browser cannot replace them. This endpoint does not sign, submit, reserve capital, or create a loan.",
+        security: [{ sessionCookie: [] }],
+        parameters: [
+          {
+            name: "caseId",
+            in: "path",
+            required: true,
+            schema: { type: "string", minLength: 16, maxLength: 80 },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Structured proposal and deterministic policy result.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ProposalResponse" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "404": { $ref: "#/components/responses/BadRequest" },
+          "409": { $ref: "#/components/responses/Conflict" },
+          "429": { $ref: "#/components/responses/RateLimited" },
+          "422": {
+            description: "The case is not yet natively verified.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          "502": { $ref: "#/components/responses/UpstreamError" },
+          "503": { $ref: "#/components/responses/UpstreamError" },
+        },
+      },
+    },
+    "/api/cases/{caseId}/reviews": {
+      post: {
+        tags: ["Cases"],
+        operationId: "recordCaseReview",
+        summary: "Record an append-only human review outcome",
+        description:
+          "Records an authenticated operator outcome bound to the case's current sanitized proposal. Accepting a recommendation additionally requires a fresh actionable worker read-back. This endpoint does not sign a quote, reserve capital, or approve a loan.",
+        security: [{ sessionCookie: [] }],
+        parameters: [
+          {
+            name: "caseId",
+            in: "path",
+            required: true,
+            schema: { type: "string", minLength: 16, maxLength: 80 },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateCaseReviewRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Review event appended to the case history.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CaseReviewResponse" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "403": { $ref: "#/components/responses/Forbidden" },
+          "409": { $ref: "#/components/responses/Conflict" },
+          "429": { $ref: "#/components/responses/RateLimited" },
+          "503": { $ref: "#/components/responses/UpstreamError" },
+        },
+      },
+    },
     "/api/demo/evaluate": {
       post: {
         tags: ["Local demo"],
@@ -134,10 +320,46 @@ export const openApiDocument = {
                 properties: {
                   mode: {
                     type: "string",
-                    enum: ["safe", "unsafe", "cancelled"],
+                    enum: ["safe", "unsafe", "cancelled", "custom"],
+                  },
+                  advanceBps: {
+                    type: "integer",
+                    minimum: 0,
+                    maximum: 10_000,
+                    description:
+                      "Required for custom mode. Requested advance in basis points.",
+                  },
+                  deliveryDays: {
+                    type: "integer",
+                    minimum: 0,
+                    maximum: 365,
+                    description:
+                      "Required for custom mode. Proposed delivery tenor in days.",
                   },
                 },
                 additionalProperties: false,
+              },
+              examples: {
+                safe: {
+                  summary: "Policy-approved fixture",
+                  value: { mode: "safe" },
+                },
+                unsafe: {
+                  summary: "Advance-cap rejection",
+                  value: { mode: "unsafe" },
+                },
+                cancelled: {
+                  summary: "Lifecycle rejection",
+                  value: { mode: "cancelled" },
+                },
+                custom: {
+                  summary: "Operator-provided local proposal",
+                  value: {
+                    mode: "custom",
+                    advanceBps: 3_000,
+                    deliveryDays: 45,
+                  },
+                },
               },
             },
           },
@@ -456,6 +678,7 @@ export const openApiDocument = {
           "creditcoinTxHash",
           "retryCount",
           "blockHeight",
+          "sourceOrder",
           "stageTimestamps",
           "createdAt",
           "updatedAt",
@@ -493,6 +716,12 @@ export const openApiDocument = {
           creditcoinTxHash: { type: ["string", "null"] },
           retryCount: { type: "integer", minimum: 0 },
           blockHeight: { type: ["integer", "null"], minimum: 0 },
+          sourceOrder: {
+            oneOf: [
+              { type: "null" },
+              { $ref: "#/components/schemas/SourceOrderDetails" },
+            ],
+          },
           stageTimestamps: {
             type: "object",
             additionalProperties: { type: "string", format: "date-time" },
@@ -502,14 +731,498 @@ export const openApiDocument = {
         },
         additionalProperties: false,
       },
+      SourceOrderDetails: {
+        type: "object",
+        required: [
+          "buyer",
+          "supplier",
+          "settlementToken",
+          "orderValueMinor",
+          "guaranteeAmountMinor",
+          "deliveryDeadline",
+          "nonce",
+        ],
+        properties: {
+          buyer: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+          supplier: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+          settlementToken: {
+            type: "string",
+            pattern: "^0x[a-fA-F0-9]{40}$",
+          },
+          orderValueMinor: { type: "string", pattern: "^\\d+$" },
+          guaranteeAmountMinor: { type: "string", pattern: "^\\d+$" },
+          deliveryDeadline: { type: "integer", minimum: 0 },
+          nonce: { type: "integer", minimum: 0 },
+        },
+        additionalProperties: false,
+      },
+      CreateCaseRequest: {
+        type: "object",
+        required: [
+          "sourceTxHash",
+          "requestedAdvanceBps",
+          "deliveryDays",
+          "role",
+        ],
+        properties: {
+          sourceTxHash: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          requestedAdvanceBps: {
+            type: "integer",
+            minimum: 0,
+            maximum: 10_000,
+          },
+          deliveryDays: { type: "integer", minimum: 0, maximum: 365 },
+          role: { enum: ["lender", "marketplace", "supplier"] },
+        },
+        additionalProperties: false,
+      },
+      CaseResponse: {
+        type: "object",
+        required: ["boundary", "case", "intake", "proposal", "reviews"],
+        properties: {
+          boundary: { const: "LIVE_CASE_INTAKE" },
+          case: { $ref: "#/components/schemas/FinanceCase" },
+          intake: {
+            oneOf: [
+              { type: "null" },
+              { $ref: "#/components/schemas/IntakeStatus" },
+            ],
+          },
+          proposal: {
+            oneOf: [
+              { type: "null" },
+              { $ref: "#/components/schemas/ProposalResponse" },
+            ],
+            description:
+              "The latest sanitized proposal generated for this case, when present.",
+          },
+          reviews: {
+            type: "array",
+            maxItems: 100,
+            items: { $ref: "#/components/schemas/CaseReview" },
+          },
+        },
+        additionalProperties: false,
+      },
+      CaseListResponse: {
+        type: "object",
+        required: ["boundary", "cases"],
+        properties: {
+          boundary: { const: "LIVE_CASE_INTAKE" },
+          cases: {
+            type: "array",
+            maxItems: 100,
+            items: { $ref: "#/components/schemas/CaseListItem" },
+          },
+        },
+        additionalProperties: false,
+      },
+      CaseListItem: {
+        type: "object",
+        required: [
+          "caseId",
+          "sourceTxHash",
+          "requestedAdvanceBps",
+          "deliveryDays",
+          "role",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "proposalAvailable",
+          "latestReview",
+        ],
+        properties: {
+          caseId: { type: "string", minLength: 16, maxLength: 80 },
+          sourceTxHash: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          requestedAdvanceBps: {
+            type: "integer",
+            minimum: 0,
+            maximum: 10_000,
+          },
+          deliveryDays: { type: "integer", minimum: 0, maximum: 365 },
+          role: { enum: ["lender", "marketplace", "supplier"] },
+          status: {
+            enum: [
+              "SUBMITTED",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED_RETRYABLE",
+              "FAILED_TERMINAL",
+              "WORKER_UNAVAILABLE",
+            ],
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+          proposalAvailable: { type: "boolean" },
+          latestReview: {
+            oneOf: [
+              { type: "null" },
+              { $ref: "#/components/schemas/CaseReview" },
+            ],
+          },
+        },
+        additionalProperties: false,
+      },
+      CreateCaseReviewRequest: {
+        type: "object",
+        required: ["decision"],
+        properties: {
+          decision: {
+            enum: [
+              "ACCEPT_RECOMMENDATION",
+              "REFER_FOR_INFORMATION",
+              "DECLINE_CASE",
+            ],
+          },
+          note: { type: "string", maxLength: 1_000 },
+        },
+        additionalProperties: false,
+      },
+      CaseReview: {
+        type: "object",
+        required: [
+          "reviewId",
+          "decision",
+          "note",
+          "actorAddress",
+          "proposalEvidenceId",
+          "proposalFingerprint",
+          "proposalDecision",
+          "createdAt",
+        ],
+        properties: {
+          reviewId: { type: "string", format: "uuid" },
+          decision: {
+            enum: [
+              "ACCEPT_RECOMMENDATION",
+              "REFER_FOR_INFORMATION",
+              "DECLINE_CASE",
+            ],
+          },
+          note: { type: ["string", "null"], maxLength: 1_000 },
+          actorAddress: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+          proposalEvidenceId: {
+            type: "string",
+            pattern: "^0x[a-fA-F0-9]{64}$",
+          },
+          proposalFingerprint: {
+            oneOf: [
+              { type: "null" },
+              { type: "string", pattern: "^[a-f0-9]{64}$" },
+            ],
+          },
+          proposalDecision: { enum: ["APPROVED", "REJECTED", "REFER"] },
+          createdAt: { type: "string", format: "date-time" },
+        },
+        additionalProperties: false,
+      },
+      CaseReviewResponse: {
+        type: "object",
+        required: ["boundary", "review"],
+        properties: {
+          boundary: { const: "CASE_REVIEW" },
+          review: { $ref: "#/components/schemas/CaseReview" },
+        },
+        additionalProperties: false,
+      },
+      ProposalResponse: {
+        type: "object",
+        required: [
+          "boundary",
+          "requestId",
+          "sourceTxHash",
+          "orderId",
+          "evidenceId",
+          "proofStatus",
+          "mode",
+          "provider",
+          "model",
+          "decision",
+          "terms",
+          "quote",
+          "policy",
+          "signing",
+        ],
+        properties: {
+          boundary: { const: "LIVE_PROPOSAL" },
+          requestId: { type: "string", minLength: 16, maxLength: 80 },
+          sourceTxHash: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          orderId: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          evidenceId: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          proofStatus: { const: "LIVE_VERIFIED" },
+          mode: { enum: ["MODEL", "REFER"] },
+          provider: { type: ["string", "null"] },
+          model: { type: ["string", "null"] },
+          decision: { enum: ["APPROVED", "REJECTED", "REFER"] },
+          terms: {
+            type: "object",
+            required: [
+              "requestedAdvanceBps",
+              "requestedDeliveryDays",
+              "quotedAdvanceBps",
+              "evidenceTenorDays",
+              "status",
+            ],
+            properties: {
+              requestedAdvanceBps: {
+                type: "integer",
+                minimum: 0,
+                maximum: 10_000,
+              },
+              requestedDeliveryDays: {
+                type: "integer",
+                minimum: 0,
+                maximum: 365,
+              },
+              quotedAdvanceBps: {
+                type: "integer",
+                minimum: 0,
+                maximum: 10_000,
+              },
+              evidenceTenorDays: { type: "integer", minimum: 0 },
+              status: {
+                enum: [
+                  "MATCHED",
+                  "REQUESTED_ADVANCE_EXCEEDED",
+                  "DELIVERY_EXCEEDS_EVIDENCE",
+                  "NOT_EVALUATED",
+                ],
+              },
+            },
+            additionalProperties: false,
+          },
+          quote: { $ref: "#/components/schemas/FacilityQuote" },
+          policy: {
+            oneOf: [
+              { type: "null" },
+              { $ref: "#/components/schemas/PolicyEvaluation" },
+            ],
+          },
+          signing: {
+            type: "object",
+            required: ["status"],
+            properties: {
+              status: { enum: ["NOT_REQUESTED", "NOT_ELIGIBLE", "SIGNED"] },
+            },
+            additionalProperties: false,
+          },
+        },
+        additionalProperties: false,
+      },
+      FinanceCase: {
+        type: "object",
+        required: [
+          "caseId",
+          "sourceTxHash",
+          "requestedAdvanceBps",
+          "deliveryDays",
+          "role",
+          "status",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          caseId: { type: "string", minLength: 16, maxLength: 80 },
+          sourceTxHash: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          requestedAdvanceBps: {
+            type: "integer",
+            minimum: 0,
+            maximum: 10_000,
+          },
+          deliveryDays: { type: "integer", minimum: 0, maximum: 365 },
+          role: { enum: ["lender", "marketplace", "supplier"] },
+          status: {
+            enum: [
+              "SUBMITTED",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED_RETRYABLE",
+              "FAILED_TERMINAL",
+              "WORKER_UNAVAILABLE",
+            ],
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+        additionalProperties: false,
+      },
+      IntakeStatus: {
+        type: "object",
+        required: [
+          "requestId",
+          "sourceTxHash",
+          "expectedOrderId",
+          "expectedEventType",
+          "status",
+          "failureCode",
+          "order",
+          "history",
+          "createdAt",
+          "updatedAt",
+        ],
+        properties: {
+          requestId: { type: "string", minLength: 16, maxLength: 80 },
+          sourceTxHash: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          expectedOrderId: { type: ["string", "null"] },
+          expectedEventType: { const: "ORDER_GUARANTEED" },
+          status: {
+            enum: [
+              "ACCEPTED",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED_RETRYABLE",
+              "FAILED_TERMINAL",
+            ],
+          },
+          failureCode: { type: ["string", "null"] },
+          order: {
+            oneOf: [
+              { type: "null" },
+              { $ref: "#/components/schemas/LiveOrder" },
+            ],
+          },
+          history: {
+            type: "array",
+            maxItems: 100,
+            items: { $ref: "#/components/schemas/LiveOrder" },
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+        additionalProperties: false,
+      },
       FixtureEvaluation: {
         type: "object",
-        required: ["boundary", "mode", "quote", "policy"],
+        required: ["boundary", "mode", "quote", "policy", "trace"],
         properties: {
           boundary: { const: "LOCAL_FIXTURE_ONLY" },
-          mode: { enum: ["safe", "unsafe", "cancelled"] },
-          quote: { type: "object", additionalProperties: true },
-          policy: { type: "object", additionalProperties: true },
+          mode: { enum: ["safe", "unsafe", "cancelled", "custom"] },
+          quote: { $ref: "#/components/schemas/FacilityQuote" },
+          policy: { $ref: "#/components/schemas/PolicyEvaluation" },
+          trace: { $ref: "#/components/schemas/DecisionTrace" },
+        },
+        additionalProperties: false,
+      },
+      FacilityQuote: {
+        type: "object",
+        required: [
+          "decision",
+          "advanceBps",
+          "feeBps",
+          "expiresAt",
+          "riskTier",
+          "reasonCodes",
+          "evidenceIds",
+          "policyVersion",
+          "modelVersion",
+        ],
+        properties: {
+          decision: { enum: ["APPROVE", "REFER", "REJECT"] },
+          advanceBps: { type: "integer", minimum: 0, maximum: 10_000 },
+          feeBps: { type: "integer", minimum: 0, maximum: 10_000 },
+          expiresAt: { type: "integer", minimum: 1 },
+          riskTier: { enum: ["A", "B", "C", "REFER"] },
+          reasonCodes: {
+            type: "array",
+            minItems: 1,
+            items: {
+              enum: [
+                "BUYER_GUARANTEE_VERIFIED",
+                "POSITIVE_SETTLEMENT_HISTORY",
+                "TENOR_WITHIN_POLICY",
+                "CONCENTRATION_WITHIN_POLICY",
+                "LIQUIDITY_AVAILABLE",
+                "ADVANCE_LIMIT_EXCEEDED",
+                "ORDER_CANCELLED",
+                "ORDER_DISPUTED",
+                "QUOTE_EXPIRED",
+                "MODEL_UNAVAILABLE",
+                "EVIDENCE_MISSING",
+              ],
+            },
+          },
+          evidenceIds: {
+            type: "array",
+            minItems: 1,
+            items: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          },
+          policyVersion: { type: "string" },
+          modelVersion: { type: "string" },
+          signer: { type: "string", pattern: "^0x[a-fA-F0-9]{64}$" },
+          nonce: { type: "integer", minimum: 0 },
+        },
+        additionalProperties: false,
+      },
+      PolicyEvaluation: {
+        type: "object",
+        required: [
+          "decision",
+          "requestedAdvanceMinor",
+          "approvedAdvanceMinor",
+          "checks",
+        ],
+        properties: {
+          decision: { enum: ["APPROVED", "REJECTED", "REFER"] },
+          failureCode: {
+            enum: [
+              "INVALID_INPUT",
+              "NON_APPROVAL_DECISION",
+              "ZERO_ADVANCE",
+              "ADVANCE_LIMIT",
+              "GUARANTEE_TOO_LOW",
+              "TENOR_LIMIT",
+              "BUYER_CONCENTRATION",
+              "QUOTE_EXPIRED",
+              "UNKNOWN_SIGNER",
+              "POLICY_VERSION",
+              "INVALID_STATE",
+              "INSUFFICIENT_LIQUIDITY",
+              "EVIDENCE_MISMATCH",
+            ],
+          },
+          requestedAdvanceMinor: { type: "integer", minimum: 0 },
+          approvedAdvanceMinor: { type: "integer", minimum: 0 },
+          checks: {
+            type: "array",
+            items: { $ref: "#/components/schemas/PolicyCheck" },
+          },
+        },
+        additionalProperties: false,
+      },
+      PolicyCheck: {
+        type: "object",
+        required: ["id", "label", "status", "actual", "limit"],
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+          status: { enum: ["PASS", "FAIL", "NOT_APPLICABLE"] },
+          actual: { type: "string" },
+          limit: { type: "string" },
+          failureCode: { type: "string" },
+        },
+        additionalProperties: false,
+      },
+      DecisionTrace: {
+        type: "object",
+        required: [
+          "requestId",
+          "evaluatedAt",
+          "evaluationDurationMs",
+          "inputHash",
+          "schemaVersion",
+          "origin",
+          "boundary",
+          "policyVersion",
+        ],
+        properties: {
+          requestId: { type: "string", format: "uuid" },
+          evaluatedAt: { type: "string", format: "date-time" },
+          evaluationDurationMs: { type: "integer", minimum: 0 },
+          inputHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          schemaVersion: { const: "fixture-evaluation-v1" },
+          origin: { const: "FIXTURE" },
+          boundary: { const: "LOCAL_FIXTURE_ONLY" },
+          policyVersion: { type: "string" },
         },
         additionalProperties: false,
       },

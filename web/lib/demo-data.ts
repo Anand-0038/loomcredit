@@ -58,6 +58,7 @@ export const demoEvaluation = evaluateQuote({
   now: 1_786_200_000,
   decision: DEMO_SAFE_QUOTE.decision,
   advanceBps: DEMO_SAFE_QUOTE.advanceBps,
+  feeBps: DEMO_SAFE_QUOTE.feeBps,
   quoteExpiresAt: DEMO_SAFE_QUOTE.expiresAt,
   buyerExposureMinor: DEMO_EVIDENCE_PACKET.openBuyerExposureMinor,
   portfolioCapacityMinor: DEMO_EVIDENCE_PACKET.vaultTotalLiquidityMinor,

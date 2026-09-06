@@ -75,13 +75,13 @@ export default function SecurityPage() {
                 </li>
                 <li>
                   No live proof response or deployed contract address is
-                  embedded in the local browser demo.
+                  embedded in the local browser application.
                 </li>
                 <li>
                   No model response is fabricated when the model environment is
                   missing.
                 </li>
-                <li>No transaction is called by the browser demo lab.</li>
+                <li>No transaction is called by the browser policy lab.</li>
               </ul>
             </section>
           </div>

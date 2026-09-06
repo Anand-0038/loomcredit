@@ -2,8 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   LIVE_EVIDENCE_BOUNDARY,
+  hasRecordedRiskGuardApproval,
+  recordedRiskGuardReceipt,
   resolveLiveEvidenceApiUrl,
 } from "./live-evidence";
+import liveEvidence from "../../docs/demo-evidence.json";
 
 function env(value: Record<string, string>): NodeJS.ProcessEnv {
   return {
@@ -86,5 +89,31 @@ describe("live evidence endpoint resolution", () => {
 
   it("returns the public boundary constant", () => {
     expect(LIVE_EVIDENCE_BOUNDARY).toBe("LIVE_EVIDENCE_STATUS_API");
+  });
+});
+
+describe("recorded RiskGuard evidence", () => {
+  it("requires a complete HTTPS approval receipt before showing the stage as verified", () => {
+    expect(hasRecordedRiskGuardApproval()).toBe(true);
+    expect(recordedRiskGuardReceipt()).toEqual({
+      explorer: liveEvidence.agent.signing.submission.explorer,
+      transactionHash: liveEvidence.agent.signing.submission.transactionHash,
+    });
+
+    const incompleteEvidence = {
+      ...liveEvidence,
+      agent: {
+        ...liveEvidence.agent,
+        signing: {
+          ...liveEvidence.agent.signing,
+          submission: {
+            ...liveEvidence.agent.signing.submission,
+            transactionHash: "not-a-transaction-hash",
+          },
+        },
+      },
+    };
+
+    expect(hasRecordedRiskGuardApproval(incompleteEvidence)).toBe(false);
   });
 });

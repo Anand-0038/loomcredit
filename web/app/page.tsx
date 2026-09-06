@@ -18,7 +18,10 @@ import {
   formatSourceMinorUnits,
   sourceTestnetEvidence,
 } from "../lib/source-evidence";
-import { liveEvidence } from "../lib/live-evidence";
+import {
+  hasRecordedRiskGuardApproval,
+  liveEvidence,
+} from "../lib/live-evidence";
 
 export const metadata: Metadata = {
   title: "Attested trade evidence for bounded underwriting",
@@ -26,6 +29,11 @@ export const metadata: Metadata = {
     "LoomCredit connects buyer-backed trade events to evidence-bound AI proposals and deterministic RiskGuard controls.",
   alternates: { canonical: "/" },
 };
+
+const recordedRiskGuardApproval = hasRecordedRiskGuardApproval();
+const demoProposedAdvanceMinor = Math.floor(
+  (sourceTestnetEvidence.orderValueMinor * 3_000) / 10_000,
+);
 
 export default function HomePage() {
   return (
@@ -48,17 +56,24 @@ export default function HomePage() {
               Policy-controlled <em>actions.</em>
             </h1>
             <p className="lede">
-              LoomCredit turns proof-backed trade evidence into a quote that can
-              be inspected, signed, and stopped by policy before capital is
-              reserved.
+              For a lender or marketplace operator, start with a verified order,
+              see what a bounded advance could look like, and understand why
+              policy says yes, no, or review.
+            </p>
+            <p className="hero-boundary-line">
+              Under the hood: Attestcoin proves the event, AI proposes, and
+              deterministic policy controls the next gate.
             </p>
             <div className="hero-actions">
-              <Link className="button button-primary" href="/demo">
-                Open the demo lab{" "}
+              <Link className="button button-primary" href="/review">
+                Review a case{" "}
                 <ArrowRight size={18} weight="bold" aria-hidden="true" />
               </Link>
-              <Link className="button button-secondary" href="/security">
-                See the controls
+              <Link
+                className="button button-secondary"
+                href={`/proof/${liveEvidence.creditcoin.evidenceId}`}
+              >
+                Inspect recorded proof
               </Link>
             </div>
             <div className="hero-thesis" role="note">
@@ -67,6 +82,14 @@ export default function HomePage() {
                 Let evidence open the door. Let policy decide whether anything
                 moves through it.
               </p>
+            </div>
+            <div className="hero-case-preview" aria-label="Local policy sample">
+              <span>Try one finance case</span>
+              <strong>
+                {formatSourceMinorUnits(sourceTestnetEvidence.orderValueMinor)}{" "}
+                order → {formatSourceMinorUnits(demoProposedAdvanceMinor)}
+              </strong>
+              <small>Local policy sample · NO_CAPITAL_MOVED</small>
             </div>
           </div>
           <div className="hero-proof-wrap">
@@ -80,41 +103,73 @@ export default function HomePage() {
                 </span>
                 <span className="hero-proof-status">
                   <CheckCircle size={14} weight="bold" aria-hidden="true" />
-                  Source + CC3 verified
+                  {recordedRiskGuardApproval
+                    ? "RiskGuard approved · sandbox"
+                    : "Source + CC3 verified"}
                 </span>
               </div>
               <div
                 className="hero-proof-trace"
-                aria-label="Recorded evidence path: source receipt, USC proof, facility registry, then RiskGuard as the next gate"
+                aria-label={
+                  recordedRiskGuardApproval
+                    ? "Recorded evidence path: Ethereum source event, Attestcoin and USC proof, Creditcoin verification, registered evidence, AI proposal, and RiskGuard approval receipt"
+                    : "Recorded evidence path: Ethereum source event, Attestcoin and USC proof, Creditcoin verification, registered evidence, then an AI proposal and RiskGuard decision as separate gates"
+                }
               >
                 <span className="hero-proof-trace-line" aria-hidden="true" />
                 <span className="hero-proof-step verified">
                   <span className="hero-proof-step-dot">
                     <CheckCircle size={14} weight="bold" aria-hidden="true" />
                   </span>
-                  <strong>Source</strong>
-                  <small>receipt</small>
+                  <strong>Ethereum</strong>
+                  <small>source event</small>
                 </span>
                 <span className="hero-proof-step verified">
                   <span className="hero-proof-step-dot">
                     <CheckCircle size={14} weight="bold" aria-hidden="true" />
                   </span>
-                  <strong>USC</strong>
-                  <small>proof</small>
+                  <strong>Attestcoin</strong>
+                  <small>USC proof</small>
                 </span>
                 <span className="hero-proof-step verified">
                   <span className="hero-proof-step-dot">
                     <CheckCircle size={14} weight="bold" aria-hidden="true" />
                   </span>
-                  <strong>CC3</strong>
-                  <small>registry</small>
+                  <strong>Creditcoin</strong>
+                  <small>verification</small>
                 </span>
-                <span className="hero-proof-step next">
+                <span className="hero-proof-step verified">
                   <span className="hero-proof-step-dot">
-                    <LockKey size={14} weight="bold" aria-hidden="true" />
+                    <CheckCircle size={14} weight="bold" aria-hidden="true" />
                   </span>
-                  <strong>Guard</strong>
-                  <small>next gate</small>
+                  <strong>Evidence</strong>
+                  <small>registered</small>
+                </span>
+                <span className="hero-proof-step verified">
+                  <span className="hero-proof-step-dot">
+                    <CheckCircle size={14} weight="bold" aria-hidden="true" />
+                  </span>
+                  <strong>AI</strong>
+                  <small>proposal</small>
+                </span>
+                <span
+                  className={
+                    recordedRiskGuardApproval
+                      ? "hero-proof-step verified"
+                      : "hero-proof-step next"
+                  }
+                >
+                  <span className="hero-proof-step-dot">
+                    {recordedRiskGuardApproval ? (
+                      <CheckCircle size={14} weight="bold" aria-hidden="true" />
+                    ) : (
+                      <LockKey size={14} weight="bold" aria-hidden="true" />
+                    )}
+                  </span>
+                  <strong>RiskGuard</strong>
+                  <small>
+                    {recordedRiskGuardApproval ? "receipt" : "next gate"}
+                  </small>
                 </span>
               </div>
               <h2>A buyer commitment recorded before policy acts.</h2>
@@ -165,7 +220,9 @@ export default function HomePage() {
             </div>
             <p className="hero-proof-caption">
               <span aria-hidden="true" />
-              Observed on testnet. Quote execution is a separate policy step.
+              {recordedRiskGuardApproval
+                ? "Observed on testnet. The approval is accounting-only, not a loan."
+                : "Observed on testnet. Quote execution is a separate policy step."}
             </p>
           </div>
         </div>
@@ -250,6 +307,59 @@ export default function HomePage() {
 
       <section className="section section-alt">
         <div className="container">
+          <div className="section-heading operator-flow-heading">
+            <div>
+              <span className="eyebrow">Use it as an operator</span>
+              <h2>Start with a case, not a test button.</h2>
+            </div>
+            <p>
+              A lender, marketplace operator, or supplier brings an order
+              reference first. LoomCredit checks the evidence boundary before a
+              proposal or policy action can be considered.
+            </p>
+          </div>
+          <div className="operator-flow">
+            <article className="operator-step">
+              <span>01</span>
+              <h3>Open a finance case</h3>
+              <p>
+                Enter a source transaction, requested advance, and delivery
+                tenor. In a marketplace integration, the order system would
+                provide this reference instead of a manual copy-and-paste.
+              </p>
+            </article>
+            <article className="operator-step">
+              <span>02</span>
+              <h3>Inspect the evidence</h3>
+              <p>
+                Follow the source receipt, USC proof, Creditcoin registry state,
+                lifecycle, and replay-safe evidence ID.
+              </p>
+            </article>
+            <article className="operator-step">
+              <span>03</span>
+              <h3>See the controlled next gate</h3>
+              <p>
+                A structured model proposal is available only after verified
+                evidence. A separate signer and RiskGuard policy gate remain
+                responsible for any action.
+              </p>
+            </article>
+          </div>
+          <div className="operator-flow-actions">
+            <Link className="button button-primary" href="/review">
+              Start a case review{" "}
+              <ArrowRight size={18} weight="bold" aria-hidden="true" />
+            </Link>
+            <span className="operator-flow-boundary">
+              Unknown references stop with <code>EVIDENCE_NOT_FOUND</code>.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className="section section-alt">
+        <div className="container">
           <div className="section-heading">
             <div>
               <span className="eyebrow">Architecture</span>
@@ -269,6 +379,7 @@ export default function HomePage() {
               alt="LoomCredit architecture: a buyer-backed source order on Sepolia moves through Attestcoin and USC proof, Creditcoin evidence registration, a structured underwriting agent, RiskGuard policy checks, and an accounting-only sandbox vault"
               width={1600}
               height={820}
+              loading="eager"
               sizes="(max-width: 720px) calc(100vw - 48px), min(1120px, calc(100vw - 60px))"
             />
           </div>
@@ -282,7 +393,7 @@ export default function HomePage() {
       </section>
 
       <section className="section section-alt">
-        <div className="container section-heading" style={{ marginBottom: 0 }}>
+        <div className="container section-heading section-heading-no-margin">
           <div>
             <span className="eyebrow">Make the stop visible</span>
             <h2>

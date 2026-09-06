@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { docsPages, docsPath, findDocsPage } from "./docs";
+import { docsPages, docsPath, findDocsPage, searchDocsPages } from "./docs";
 
 describe("documentation registry", () => {
   it("has unique, routable pages with useful section anchors", () => {
@@ -33,5 +33,15 @@ describe("documentation registry", () => {
     expect(findDocsPage("cli")?.label).toBe("CLI reference");
     expect(docsPages.some((page) => page.group === "Strategy")).toBe(false);
     expect(findDocsPage("missing")).toBeUndefined();
+  });
+
+  it("searches page content, including endpoint examples", () => {
+    expect(searchDocsPages("nonce").map((page) => page.slug)).toContain(
+      "integrations/api",
+    );
+    expect(searchDocsPages("proof builder").map((page) => page.slug)).toContain(
+      "concepts/evidence",
+    );
+    expect(searchDocsPages("not-a-real-term")).toEqual([]);
   });
 });

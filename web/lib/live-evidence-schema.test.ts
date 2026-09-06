@@ -24,6 +24,8 @@ function validResponse() {
         creditcoinTxHash: `0x${"33".repeat(32)}`,
         retryCount: 0,
         blockHeight: 10,
+        sourceOrder: null,
+        provenance: "WORKER_LIVE",
         stageTimestamps: { VERIFIED: timestamp },
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -49,6 +51,17 @@ describe("live evidence response schema", () => {
     expect(parseLiveOrdersResponse(payload)).toBeNull();
   });
 
+  it("labels legacy worker responses as worker-live until they are upgraded", () => {
+    const response = validResponse();
+    const order = response.orders[0];
+    if (!order) throw new Error("Expected a fixture order");
+    const { provenance: _provenance, ...legacyOrder } = order;
+
+    expect(
+      parseLiveOrdersResponse({ ...response, orders: [legacyOrder] }),
+    ).toMatchObject({ orders: [{ provenance: "WORKER_LIVE" }] });
+  });
+
   it("rejects malformed hashes and timestamps", () => {
     const payload = validResponse();
     const order = payload.orders[0];
@@ -61,5 +74,26 @@ describe("live evidence response schema", () => {
     if (!timestampOrder) throw new Error("Expected a fixture order");
     timestampOrder.updatedAt = "not-a-timestamp";
     expect(parseLiveOrdersResponse(timestampPayload)).toBeNull();
+  });
+
+  it("accepts exact source-order facts without converting amounts to floats", () => {
+    const response = validResponse();
+    const sourceOrder = {
+      buyer: "0x" + "44".repeat(20),
+      supplier: "0x" + "55".repeat(20),
+      settlementToken: "0x" + "66".repeat(20),
+      orderValueMinor: "100000000000000000000000",
+      guaranteeAmountMinor: "20000000000000000000000",
+      deliveryDeadline: 1_800_000_000,
+      nonce: 4,
+    };
+    const payload = {
+      ...response,
+      orders: [{ ...response.orders[0]!, sourceOrder }],
+    };
+
+    expect(parseLiveOrdersResponse(payload)?.orders[0]?.sourceOrder).toEqual(
+      sourceOrder,
+    );
   });
 });

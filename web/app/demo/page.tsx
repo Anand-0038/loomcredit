@@ -13,7 +13,7 @@ const localOrderHref =
   "/orders/0x2424242424242424242424242424242424242424242424242424242424242424";
 
 export const metadata: Metadata = {
-  title: "Demo lab",
+  title: "Policy lab",
   description:
     "Run LoomCredit's deterministic safe, unsafe, and cancelled-order scenarios.",
   robots: { index: false, follow: true },
@@ -26,7 +26,7 @@ export default function DemoPage() {
         <div className="container page-hero-grid">
           <div>
             <Breadcrumbs
-              items={[{ label: "Home", href: "/" }, { label: "Demo lab" }]}
+              items={[{ label: "Home", href: "/" }, { label: "Policy lab" }]}
             />
             <span className="eyebrow">Evidence &amp; policy lab</span>
             <h1>See where a financing proposal stops.</h1>
@@ -36,10 +36,20 @@ export default function DemoPage() {
               lab makes only a same-origin policy API request; it does not
               submit transactions or call a model provider.
             </p>
+            <div className="hero-actions">
+              <Link className="button button-primary" href="/review">
+                Start a real case review{" "}
+                <ArrowRight size={17} weight="bold" aria-hidden="true" />
+              </Link>
+              <Link className="text-link" href="/security">
+                Read the control boundary{" "}
+                <ArrowRight size={15} weight="bold" aria-hidden="true" />
+              </Link>
+            </div>
           </div>
           <aside
             className="page-hero-route"
-            aria-label="How to read the demo lab"
+            aria-label="How to read the policy lab"
           >
             <div className="page-hero-route-heading">
               <span>Read the product in three moves</span>

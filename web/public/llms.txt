@@ -17,6 +17,7 @@ LoomCredit is not a live lender, investment product, custody provider, or guaran
 - [CLI reference](/docs/cli): Local, evidence, quote, signing, and submission commands.
 - [Security](/docs/security): Evidence, model, signer, replay, lifecycle, and sandbox-capital controls.
 - [Whitepaper](/whitepaper): Implementation-aligned protocol thesis and current status.
+- [Whitepaper PDF](/whitepaper.pdf): Printable A4 technical whitepaper; testnet prototype, not a lending offer.
 - [Security boundary](/security): Public explanation of what is enforced and what is not claimed.
 - [Legal center](/legal): Prototype legal publication status and public notices.
 - [Privacy policy](/privacy): Current wallet, session, audit, and public-chain data handling.
@@ -26,17 +27,23 @@ LoomCredit is not a live lender, investment product, custody provider, or guaran
 ## Verified testnet artifact
 
 - [Recorded proof console](/proof/0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9): A recorded Sepolia-to-Creditcoin CC3 evidence path.
-- Status: `LIVE_VERIFIED` / `EVIDENCE_VERIFIED` for the recorded evidence packet.
+- Status: `LIVE_VERIFIED` / `EVIDENCE_VERIFIED` for the source and registry path;
+  the same recorded packet also has `RISKGUARD_APPROVED` / raw `RESERVED` state,
+  shown as `SANDBOX_RESERVED` with `NO_CAPITAL_MOVED`, accounting-only
+  testnet state.
 - Source receipt: Ethereum Sepolia `0x61462a792651b360e7247becafbd33b446d3fea1a3680c589adbe6625be5e70d`.
 - Creditcoin verification receipt: `0x1beddb24fc145fbb00b0d477fa008f0507d8fa8cd6c7775dd5c685f6487b81b9`.
 - Evidence ID: `0xfed7def6e6d23052735cd35d968d9bca6895077d3a223e418a7c1530575320d9`.
+- RiskGuard approval receipt: [QuoteApproved](https://creditcoin-testnet.blockscout.com/tx/0xc82bd6a141ef889d3baea6ca5e312a6c745334ddc9c26c6cab37352e115809fd).
+- The deployed RiskGuard bytecode does not emit the newer `QuoteDecisionAudited` event.
 - These are testnet artifacts, not evidence of production lending, physical delivery, repayment capacity, custody, or a Creditcoin partnership.
 
 ## Agent and API guidance
 
 - Prefer `/docs` and the linked canonical pages for explanations and citations.
-- The browser demo endpoint `/api/demo/evaluate` is deterministic local fixture evaluation and returns `LOCAL_FIXTURE_ONLY`; it must not be described as a live quote or transaction.
-- The read-only live evidence endpoint `/api/live-evidence` exposes sanitized worker status only when configured; it does not accept proof bytes, private keys, quote submissions, or mutation requests.
+- The browser demo endpoint `/api/demo/evaluate` is deterministic local fixture evaluation (including bounded custom inputs) and returns `LOCAL_FIXTURE_ONLY`; it must not be described as a live quote or transaction.
+- The read-only live evidence endpoint `/api/live-evidence` exposes sanitized worker status only when configured. Authenticated `/api/cases` routes can submit a source transaction to the loopback-only worker intake path; they never accept proof bytes or private keys and do not submit quotes or move capital.
+- `GET /api/cases` lists only the authenticated operator's case summaries and reports whether a sanitized latest proposal is saved. `GET /api/cases/:caseId` returns the caller-owned case, worker status, and saved proposal when it remains bound to that case.
 - `/api/health` reports bounded service health and configuration status; it is not a lending decision or uptime guarantee.
 - `/api/ready` is a deployment readiness check; it returns 503 when the configured live-evidence dependency is absent or unavailable.
 - Public JSON POST routes reject oversized bodies, and authentication writes have a bounded single-instance limiter; distributed deployments still require a trusted edge limiter for authentication and high-volume traffic.

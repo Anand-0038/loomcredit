@@ -175,6 +175,17 @@ export const docsPages: DocsPage[] = [
         ],
       },
       {
+        id: "live-intake",
+        title: "Run an intentional live intake",
+        blocks: [
+          code("bash", "corepack pnpm worker:watch:embedded"),
+          {
+            kind: "text",
+            body: "The normal dev command stays read-only. The embedded worker command is an explicit testnet mutation gate: an authenticated operator can submit a source transaction through /review, and the worker will perform the real receipt, USC proof, and CC3 registration path. It never treats typed terms as evidence and it does not submit a quote or move capital.",
+          },
+        ],
+      },
+      {
         id: "local-demo",
         title: "Run the local policy lab",
         blocks: [
@@ -321,7 +332,7 @@ export const docsPages: DocsPage[] = [
             items: [
               "Advance cap: the quote cannot exceed 40% of the order value.",
               "Guarantee ratio: the buyer guarantee must satisfy the configured minimum.",
-              "Tenor: delivery must be within the configured 90-day policy window.",
+              "Tenor: the exact source delivery deadline must be within the configured 90-day policy window.",
               "Buyer concentration: reserved exposure is bounded against total capacity.",
               "Expiry, evidence binding, lifecycle state, signer approval, policy version, and liquidity are checked before approval.",
               "RiskGuard also rejects a signed quote above its MAX_FEE_BPS bound and emits QuoteDecisionAudited with the decision inputs when the deployed bytecode includes the event.",
@@ -379,7 +390,7 @@ export const docsPages: DocsPage[] = [
         blocks: [
           {
             kind: "text",
-            body: "The Next.js server exposes same-origin routes under /api. JSON responses include a boundary field where the route has a trust distinction. Dynamic routes use no-store caching. The live-evidence proxy validates the worker response against the documented schema and rejects unexpected fields before returning it. The worker status API is read-only and should be placed behind a private network or authenticated proxy in a hosted deployment.",
+            body: "The Next.js server exposes same-origin routes under /api. JSON responses include a boundary field where the route has a trust distinction. Dynamic routes use no-store caching. The live-evidence proxy validates the worker response against the documented schema and rejects unexpected fields before returning it. The authenticated case routes accept source transaction hashes and requested terms, then proxy only to the worker's loopback-only intake and proposal routes; they never accept proof bytes, private keys, or browser-supplied proposal terms.",
           },
         ],
       },
@@ -408,8 +419,24 @@ export const docsPages: DocsPage[] = [
                 "Proxies the sanitized worker status response.",
               ],
               [
+                "GET /api/cases",
+                "Lists the signed-in operator's case summaries and whether a latest proposal is saved.",
+              ],
+              [
+                "POST /api/cases",
+                "Creates an authenticated operator case and starts source evidence intake.",
+              ],
+              [
+                "GET /api/cases/:caseId",
+                "Returns the caller-owned case, current worker status, decoded source-order facts, chronological lifecycle history, and any sanitized proposal.",
+              ],
+              [
+                "POST /api/cases/:caseId/proposal",
+                "Builds a fresh live packet, saves the sanitized latest proposal to the case, and returns it without signing or moving capital.",
+              ],
+              [
                 "POST /api/demo/evaluate",
-                "Runs safe, unsafe, or cancelled local fixture policy scenarios.",
+                "Runs safe, unsafe, cancelled, or operator-provided local fixture policy scenarios.",
               ],
               [
                 "POST /api/auth/nonce",
@@ -447,11 +474,15 @@ export const docsPages: DocsPage[] = [
             "bash",
             "curl -s -X POST http://localhost:3000/api/demo/evaluate \\\n  -H 'content-type: application/json' \\\n  -d '{\"mode\":\"unsafe\"}' | jq '.boundary, .policy.decision, .policy.failureCode'",
           ),
+          code(
+            "bash",
+            'curl -s -X POST http://localhost:3000/api/demo/evaluate \\\n  -H \'content-type: application/json\' \\\n  -d \'{"mode":"custom","advanceBps":3000,"deliveryDays":45}\' | jq \'.trace, .policy.decision, .policy.requestedAdvanceMinor\'',
+          ),
           {
             kind: "callout",
             tone: "warning",
             title: "Fixture boundary",
-            body: "This endpoint is a deterministic local lab. It must never be presented as a live underwriting or transaction endpoint.",
+            body: "This endpoint is a deterministic local lab. Custom inputs are evaluated against the recorded fixture packet and must never be presented as a live underwriting or transaction endpoint.",
           },
         ],
       },
@@ -495,7 +526,11 @@ export const docsPages: DocsPage[] = [
               ["pnpm worker:process -- 0x…", "Process one source transaction."],
               ["pnpm worker:watch-once", "Scan one bounded source range."],
               ["pnpm worker:watch", "Run the durable polling watcher."],
-              ["pnpm worker:status", "Serve sanitized GET /v1/orders status."],
+              ["pnpm worker:status", "Serve sanitized read-only GET status."],
+              [
+                "pnpm worker:watch:embedded",
+                "Run the explicit loopback intake gate alongside the live watcher.",
+              ],
             ],
           },
         ],
@@ -666,7 +701,7 @@ export const docsPages: DocsPage[] = [
               "Keep .env ignored and out of commits, screenshots, logs, and prompts.",
               "Keep worker and agent keys out of web/.env.local and all NEXT_PUBLIC_* variables.",
               "Use separate source, deployer, worker, and agent identities before serious deployment.",
-              "The web service emits baseline security headers; add a deployment-specific CSP after reviewing wallet and provider requirements.",
+              "The web service emits a baseline Content-Security-Policy plus frame, referrer, permission, and content-type protections. Recheck allowed analytics hosts when changing providers.",
               "Authentication writes have a bounded single-instance limiter and return Retry-After; configure AUTH_ORIGIN explicitly and use a trusted distributed edge limiter before exposing authentication to many users.",
               "Rotate any credential pasted into chat or committed to history.",
             ],
@@ -889,4 +924,57 @@ export function docsPath(slug: string): string {
 
 export function findDocsPage(slug: string): DocsPage | undefined {
   return docsPages.find((page) => page.slug === slug);
+}
+
+function docsBlockText(block: DocsBlock): string {
+  switch (block.kind) {
+    case "text":
+      return block.body;
+    case "bullets":
+    case "steps":
+      return block.items.join(" ");
+    case "code":
+      return `${block.language} ${block.code}`;
+    case "callout":
+      return `${block.title} ${block.body}`;
+    case "table":
+      return `${block.columns.join(" ")} ${block.rows.flat().join(" ")}`;
+    case "links":
+      return block.items
+        .map((item) => `${item.label} ${item.href} ${item.note}`)
+        .join(" ");
+  }
+}
+
+function docsSearchText(page: DocsPage): string {
+  return [
+    page.slug,
+    page.group,
+    page.label,
+    page.title,
+    page.description,
+    ...page.sections.flatMap((section) => [
+      section.id,
+      section.title,
+      ...section.blocks.map(docsBlockText),
+    ]),
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+/**
+ * Search the complete rendered documentation contract, not only its sidebar
+ * labels. Keeping this index derived from the same registry prevents a page
+ * from becoming undiscoverable when its useful term only appears in a code
+ * sample or section body.
+ */
+export function searchDocsPages(query: string): DocsPage[] {
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return docsPages;
+
+  return docsPages.filter((page) => {
+    const searchable = docsSearchText(page);
+    return terms.every((term) => searchable.includes(term));
+  });
 }

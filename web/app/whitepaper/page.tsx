@@ -3,7 +3,10 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 
 import { Breadcrumbs } from "../../components/structured-data";
-import { liveEvidence } from "../../lib/live-evidence";
+import {
+  hasRecordedRiskGuardApproval,
+  liveEvidence,
+} from "../../lib/live-evidence";
 
 export const metadata: Metadata = {
   title: "Whitepaper",
@@ -27,6 +30,8 @@ const contents = [
 ];
 
 const liveProofHref = `/proof/${liveEvidence.creditcoin.evidenceId}`;
+
+const recordedRiskGuardApproval = hasRecordedRiskGuardApproval();
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <span className="whitepaper-section-label">{children}</span>;
@@ -108,8 +113,10 @@ export default function WhitepaperPage() {
               <h2 id="whitepaper-evidence-title">Recorded evidence packet</h2>
               <p>
                 This checkout includes one real Sepolia receipt, native CC3
-                verification, and independent registry read-back. The AI quote
-                step remains a separate credentialed gate.
+                verification, and independent registry read-back.{" "}
+                {recordedRiskGuardApproval
+                  ? "It also records a signed RiskGuard approval as accounting-only testnet state, not a loan."
+                  : "The AI quote step remains a separate credentialed gate."}
               </p>
               <dl className="whitepaper-evidence-list">
                 <div>
@@ -129,8 +136,16 @@ export default function WhitepaperPage() {
                 <div>
                   <dt>AI quote</dt>
                   <dd>
-                    <code>NOT_RUN</code>
-                    <span>Model credentials are not stored here</span>
+                    <code>
+                      {recordedRiskGuardApproval
+                        ? "RISKGUARD_APPROVED"
+                        : "NOT_RUN"}
+                    </code>
+                    <span>
+                      {recordedRiskGuardApproval
+                        ? "Signed quote and receipt recorded on CC3"
+                        : "Model credentials are not stored here"}
+                    </span>
                   </dd>
                 </div>
                 <div>
@@ -200,11 +215,24 @@ export default function WhitepaperPage() {
                 The prototype’s contribution is a visible failure boundary. The
                 local adversarial policy lab shows a safe 30% proposal passing
                 and an unsafe 80% proposal being rejected against the
-                deterministic cap. The recorded live bundle currently stops at
-                <code>EVIDENCE_VERIFIED</code>; it does not claim a live model
-                approval or rejection receipt. The design does not claim to
-                prove physical delivery, legal enforceability, off-network
-                duplicate financing, or repayment ability.
+                deterministic cap.{" "}
+                {recordedRiskGuardApproval ? (
+                  <>
+                    The recorded live bundle also includes a signed model quote
+                    and a backwards-compatible <code>QuoteApproved</code>{" "}
+                    receipt; the deployed bytecode does not expose the newer{" "}
+                    <code>QuoteDecisionAudited</code> event.{" "}
+                  </>
+                ) : (
+                  <>
+                    The recorded live bundle currently stops at{" "}
+                    <code>EVIDENCE_VERIFIED</code>; it does not claim a live
+                    model approval or rejection receipt.{" "}
+                  </>
+                )}
+                The design does not claim to prove physical delivery, legal
+                enforceability, off-network duplicate financing, or repayment
+                ability.
               </p>
             </section>
 
@@ -370,7 +398,7 @@ export default function WhitepaperPage() {
                 </div>
                 <div>
                   <span>Quote lifetime</span>
-                  <strong>600 seconds</strong>
+                  <strong>60–300 seconds</strong>
                 </div>
               </div>
               <p className="whitepaper-note">
@@ -378,7 +406,9 @@ export default function WhitepaperPage() {
                 promise that a lender would use them in production. Model
                 unavailability, timeout, or malformed output routes to{" "}
                 <code>REFER</code>; a quote that exceeds policy is rejected. The
-                live model-to-RiskGuard transaction remains a release gate.
+                {recordedRiskGuardApproval
+                  ? " recorded approval is testnet-only and the deployed bytecode still lacks the extended audit event."
+                  : " live model-to-RiskGuard transaction remains a release gate."}
               </p>
             </section>
 
@@ -399,10 +429,11 @@ export default function WhitepaperPage() {
               </div>
               <p>
                 Cancellation, dispute, and settlement evidence can invalidate or
-                close a facility. UI state is never authoritative; contracts and
-                persisted worker records are. The worker stores event stages and
-                a source cursor so a restart can reconcile rather than silently
-                lose a case.
+                close a facility, including direct settlement from an open
+                evidence or quote state and cancellation after a dispute. The
+                USC boundary compares the complete lifecycle payload. Expired
+                quotes and policy rejections remain off-chain outcomes; UI state
+                is never authoritative.
               </p>
               <div className="whitepaper-failure-list">
                 <h3>Fail-closed cases</h3>
@@ -591,9 +622,17 @@ export default function WhitepaperPage() {
           </div>
           <div className="access-next-links">
             <Link className="button button-primary" href="/demo">
-              Open the demo lab{" "}
+              Open the policy lab{" "}
               <ArrowRight size={17} weight="bold" aria-hidden="true" />
             </Link>
+            <a
+              className="button button-secondary"
+              href="/whitepaper.pdf"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Download PDF <ArrowUpRight size={17} aria-hidden="true" />
+            </a>
             <Link className="text-link" href="/security">
               Security boundary{" "}
               <ArrowRight size={16} weight="bold" aria-hidden="true" />

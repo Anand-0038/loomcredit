@@ -53,11 +53,11 @@ export default function LegalPage() {
       </LegalSection>
       <LegalSection title="Important status">
         <p>
-          The pages are a substantive prototype baseline, not a certification of
-          compliance. The operator must supply the legal entity, address,
-          contact channel, governing law, retention schedule, vendor terms, and
-          applicable financial-regulatory analysis before accepting customer
-          data or presenting the system as a lending or lending-service product.
+          These pages are a substantive prototype baseline, not a certification
+          of compliance. Before the product accepts customer data or supports a
+          regulated lending workflow, the final published materials will
+          identify the responsible entity, contact channel, governing law,
+          retention schedule, vendor terms, and applicable regulatory analysis.
         </p>
       </LegalSection>
       <LegalSection title="Do not submit sensitive material">

@@ -262,10 +262,34 @@ export function roleForAddress(
     : "viewer";
 }
 
+export function sessionRoleIsCurrent(
+  session: Pick<AuthSession, "address" | "role">,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return session.role === roleForAddress(session.address, env);
+}
+
 export async function currentAuthSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_SESSION_COOKIE)?.value;
-  return token ? getAuthStore().getSession(token) : null;
+  if (!token) return null;
+  const store = getAuthStore();
+  const session = store.getSession(token);
+  if (!session) return null;
+  if (!sessionRoleIsCurrent(session)) {
+    store.revokeSession(token);
+    store.recordAudit({
+      eventType: "AUTH_SESSION_ROLE_REVOKED",
+      address: session.address,
+      accountId: session.accountId,
+      sessionIdHash: session.sessionIdHash,
+      action: "auth.session.role_revoked",
+      success: true,
+      metadata: { previousRole: session.role },
+    });
+    return null;
+  }
+  return session;
 }
 
 export async function requirePrivilegedSession(

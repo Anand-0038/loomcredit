@@ -58,7 +58,7 @@ export default function AccessPage() {
             </section>
             <section className="surface-card">
               <span className="eyebrow">Product boundary</span>
-              <h2 style={{ marginTop: 10 }}>A wallet is not a session.</h2>
+              <h2 className="surface-card-title">A wallet is not a session.</h2>
               <ul>
                 <li>
                   <strong>Implemented:</strong> EIP-1193 account discovery,
@@ -92,8 +92,8 @@ export default function AccessPage() {
               <h2>Turn a public address into a controlled workspace.</h2>
             </div>
             <div className="access-next-links">
-              <Link className="button button-primary" href="/demo">
-                Open the demo lab{" "}
+              <Link className="button button-primary" href="/review">
+                Open the operator workspace{" "}
                 <ArrowRight size={17} weight="bold" aria-hidden="true" />
               </Link>
               <Link className="text-link" href="/whitepaper">

@@ -38,6 +38,27 @@ afterEach(() => {
 });
 
 describe("api /api/auth/verify", () => {
+  it("rejects a cross-origin signature verification before consuming a nonce", async () => {
+    isTrustedAuthOrigin.mockReturnValue(false);
+
+    const response = await POST(
+      new Request("https://app.example/api/auth/verify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBodyError),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toEqual({
+      boundary: "AUTHENTICATION",
+      code: "ORIGIN_REJECTED",
+      error:
+        "This authentication request did not come from the configured application origin.",
+    });
+  });
+
   it("returns AUTH_CONFIGURATION when auth origin environment is invalid", async () => {
     isTrustedAuthOrigin.mockImplementation(() => {
       throw new AuthProtocolError(

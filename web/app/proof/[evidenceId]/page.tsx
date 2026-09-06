@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 
 import { ProofConsole } from "../../../components/proof-console";
+import { RecordedDecisionReceipt } from "../../../components/recorded-decision-receipt";
 import { demoOrder } from "../../../lib/demo-data";
 import { liveEvidence } from "../../../lib/live-evidence";
 import { shortenId } from "../../../lib/demo-data";
@@ -96,6 +97,7 @@ export default async function ProofPage({
           {live ? (
             <>
               <ProofConsole mode="live" />
+              <RecordedDecisionReceipt />
               <div className="two-column" style={{ marginTop: 18 }}>
                 <section className="surface-card">
                   <span className="eyebrow">LIVE TESTNET</span>
@@ -136,7 +138,9 @@ export default async function ProofPage({
                           rel="noreferrer"
                           aria-label="Open the CC3 FacilityRegistry used for the state read-back"
                         >
-                          {liveEvidence.creditcoin.stateReadBack}{" "}
+                          {liveEvidence.creditcoin.stateReadBack === "RESERVED"
+                            ? "SANDBOX_RESERVED"
+                            : liveEvidence.creditcoin.stateReadBack}{" "}
                           <ArrowUpRight size={13} aria-hidden="true" />
                         </a>
                       </dd>
@@ -230,7 +234,7 @@ export default async function ProofPage({
               />
               <p>No recorded or local evidence packet matches this ID.</p>
               <Link className="text-link" href="/demo">
-                Run the demo lab{" "}
+                Open the policy lab{" "}
                 <ArrowRight size={16} weight="bold" aria-hidden="true" />
               </Link>
             </div>

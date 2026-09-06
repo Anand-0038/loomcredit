@@ -82,6 +82,17 @@ export async function POST(request: Request) {
   try {
     const address = normalizeAddress(input.data.address);
     const chainId = parseChainId(input.data.chainId);
+    const configuredChainId = configuredAuthChainId();
+    if (chainId !== configuredChainId) {
+      return errorResponse(
+        "UNSUPPORTED_CHAIN",
+        `Switch the wallet to chain ${configuredChainId} before signing in.`,
+        400,
+      );
+    }
+    // Validate the wallet's chain before consuming the nonce bucket. A user
+    // connected to the wrong network should receive the actionable chain
+    // error, not a misleading rate-limit response after repeated retries.
     const rateLimit = consumeRateLimit(`nonce:${address}`, {
       maxRequests: 5,
       windowMs: 60_000,
@@ -92,14 +103,6 @@ export async function POST(request: Request) {
         "Too many sign-in nonce requests. Try again later.",
         429,
         rateLimit.retryAfterSeconds,
-      );
-    }
-    const configuredChainId = configuredAuthChainId();
-    if (chainId !== configuredChainId) {
-      return errorResponse(
-        "UNSUPPORTED_CHAIN",
-        `Switch the wallet to chain ${configuredChainId} before signing in.`,
-        400,
       );
     }
 

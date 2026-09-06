@@ -29,9 +29,9 @@ export default function PrivacyPage() {
         <p>
           This notice applies to the LoomCredit website, its read-only API
           routes, the local policy demo, and the optional wallet sign-in flow.
-          The legal operator is shown at the top of this page when configured.
-          Until that field is completed, this page must be treated as a draft
-          awaiting the operator’s legal identity and jurisdictional review.
+          The final published notice will identify the legal operator and
+          jurisdiction. Until then, this page describes the prototype only and
+          should not be treated as a final privacy policy.
         </p>
         <p>
           The current web surface is a technical testnet prototype. It is not a
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           ]}
         />
         <p>
-          The local demo endpoint uses deterministic fixture data and does not
+          The local policy endpoint uses deterministic fixture data and does not
           call a model, proof builder, wallet, or blockchain. The browser does
           not send data to the model provider. If an operator separately runs
           the server-side agent/worker path, typed evidence may be sent to the
@@ -149,8 +149,8 @@ export default function PrivacyPage() {
         <p>
           Where applicable law grants rights such as access, correction,
           deletion, restriction, objection, portability, consent withdrawal, or
-          complaint escalation, requests should be sent to the configured legal
-          contact. The operator must verify identity, respond within the
+          complaint escalation, requests should be sent to the legal contact
+          shown above. The operator must verify identity, respond within the
           applicable deadline, and explain any public-chain or legal-retention
           limitation.
         </p>
@@ -160,8 +160,8 @@ export default function PrivacyPage() {
           </p>
         ) : (
           <p>
-            No request channel is configured yet. Set
-            <code>LEGAL_CONTACT_EMAIL</code> before public launch.
+            The request contact will be included in the final published privacy
+            notice.
           </p>
         )}
       </LegalSection>

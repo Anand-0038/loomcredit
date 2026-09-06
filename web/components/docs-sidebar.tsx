@@ -4,7 +4,12 @@ import Link from "next/link";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 
-import { docsGroups, docsPath, type DocsPage } from "../lib/docs";
+import {
+  docsGroups,
+  docsPath,
+  searchDocsPages,
+  type DocsPage,
+} from "../lib/docs";
 
 export function DocsSidebar({
   activeSlug,
@@ -17,11 +22,10 @@ export function DocsSidebar({
   const filteredPages = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return pages;
-    return pages.filter((page) =>
-      `${page.title} ${page.description} ${page.group}`
-        .toLowerCase()
-        .includes(normalized),
+    const searchableSlugs = new Set(
+      searchDocsPages(normalized).map((page) => page.slug),
     );
+    return pages.filter((page) => searchableSlugs.has(page.slug));
   }, [pages, query]);
 
   return (

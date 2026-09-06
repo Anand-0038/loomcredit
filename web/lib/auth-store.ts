@@ -41,6 +41,7 @@ export interface AuthAuditEvent {
     | "AUTH_SIGN_IN_SUCCEEDED"
     | "AUTH_SIGN_IN_FAILED"
     | "AUTH_SIGN_OUT"
+    | "AUTH_SESSION_ROLE_REVOKED"
     | "PRIVILEGED_ACTION";
   address: string | null;
   accountId: string | null;
@@ -171,6 +172,7 @@ export class AuthStore {
     mkdirSync(dirname(databasePath), { recursive: true });
     this.database = new DatabaseSync(databasePath);
     this.database.exec("PRAGMA journal_mode = WAL;");
+    this.database.exec("PRAGMA busy_timeout = 5000;");
     this.database.exec(`
       CREATE TABLE IF NOT EXISTS auth_accounts (
         account_id TEXT PRIMARY KEY,

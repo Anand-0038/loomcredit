@@ -8,6 +8,7 @@ import Link from "next/link";
 import type { FacilityQuote, PolicyEvaluation } from "@loomcredit/shared";
 
 import { formatMinorUnits } from "../lib/demo-data";
+import type { DemoTrace } from "../lib/demo-trace";
 
 import { DecisionTrace } from "./decision-trace";
 import { PolicyChecks } from "./policy-checks";
@@ -16,10 +17,12 @@ export function QuoteCard({
   quote,
   evaluation,
   boundary = "LOCAL_FIXTURE_ONLY",
+  trace = null,
 }: {
   quote: FacilityQuote;
   evaluation: PolicyEvaluation;
   boundary?: string;
+  trace?: DemoTrace | null;
 }) {
   const approved = evaluation.decision === "APPROVED";
   const referred = evaluation.decision === "REFER";
@@ -27,8 +30,8 @@ export function QuoteCard({
     <div className="demo-output">
       <div className="demo-output-header">
         <div>
-          <span className="card-kicker" style={{ color: "var(--teal-dark)" }}>
-            Deterministic quote input
+          <span className="card-kicker card-kicker-teal">
+            AI proposal · policy decision
           </span>
           <h2 className="quote-card-title">
             Policy decides what moves forward.
@@ -62,7 +65,9 @@ export function QuoteCard({
           <div className="quote-amount">
             {formatMinorUnits(evaluation.approvedAdvanceMinor)}
             <small>
-              {approved ? "approved advance" : "no capital released"}
+              {approved
+                ? "policy-approved proposal · sandbox only"
+                : "NO_CAPITAL_MOVED"}
             </small>
           </div>
         </div>
@@ -91,6 +96,7 @@ export function QuoteCard({
           quote={quote}
           evaluation={evaluation}
           boundary={boundary}
+          trace={trace}
         />
         <PolicyChecks evaluation={evaluation} />
         <Link className="text-link quote-card-link" href="/security">

@@ -24,6 +24,7 @@ const validPayload = {
       creditcoinTxHash: `0x${"dd".repeat(32)}`,
       retryCount: 0,
       blockHeight: 123,
+      sourceOrder: null,
       stageTimestamps: {
         DETECTED: "2026-08-08T10:00:00.000Z",
         VERIFIED: "2026-08-08T10:00:01.000Z",
@@ -46,6 +47,7 @@ const validPayload = {
       creditcoinTxHash: `0x${"ff".repeat(32)}`,
       retryCount: 0,
       blockHeight: 124,
+      sourceOrder: null,
       stageTimestamps: {
         DETECTED: "2026-08-08T10:01:00.000Z",
         VERIFIED: "2026-08-08T10:01:01.000Z",
@@ -68,6 +70,7 @@ const validPayload = {
       creditcoinTxHash: null,
       retryCount: 0,
       blockHeight: 125,
+      sourceOrder: null,
       stageTimestamps: {
         DETECTED: "2026-08-08T10:02:00.000Z",
       },

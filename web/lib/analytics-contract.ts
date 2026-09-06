@@ -17,7 +17,7 @@ export type AnalyticsSurface =
   | "cookies"
   | "other";
 
-export type DemoMode = "safe" | "unsafe" | "cancelled";
+export type DemoMode = "safe" | "unsafe" | "cancelled" | "custom";
 export type DemoOutcome = "approved" | "rejected" | "refer" | "error";
 export type FeedStatus =
   "connected" | "not_configured" | "unavailable" | "empty";

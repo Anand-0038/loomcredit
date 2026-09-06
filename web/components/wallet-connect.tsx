@@ -46,6 +46,11 @@ type AuthNonceResponse = {
 const INITIAL_CHECK_TIMEOUT_MS = 1800;
 const CONNECT_TIMEOUT_MS = 20_000;
 const AUTH_SIGNATURE_TIMEOUT_MS = 120_000;
+const AUTH_CHANGE_EVENT = "loomcredit:auth-change";
+
+function notifyAuthChange(): void {
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
 
 function firstAccount(value: unknown): string | null {
   if (!Array.isArray(value) || typeof value[0] !== "string") {
@@ -64,8 +69,12 @@ function shortenAddress(address: string): string {
 }
 
 function networkLabel(chainId: string): string {
-  if (chainId.toLowerCase() === "0xaa36a7") {
+  const normalized = chainId.trim().toLowerCase();
+  if (normalized === "0xaa36a7" || normalized === "11155111") {
     return "Ethereum Sepolia";
+  }
+  if (normalized === "0x18e8f" || normalized === "102031") {
+    return "Creditcoin CC3 testnet";
   }
 
   return `Chain ${chainId}`;
@@ -104,6 +113,14 @@ function responseError(value: unknown, fallback: string): string {
     if (typeof candidate.error === "string" && candidate.error.length < 240) {
       return candidate.error;
     }
+  }
+  return fallback;
+}
+
+function retryAfterMessage(response: Response, fallback: string): string {
+  const retryAfter = Number(response.headers.get("retry-after"));
+  if (Number.isSafeInteger(retryAfter) && retryAfter > 0) {
+    return `Too many sign-in attempts. Try again in about ${retryAfter} seconds.`;
   }
   return fallback;
 }
@@ -227,6 +244,7 @@ export function WalletConnect({
         setAuthUser(null);
         setAuthStatus("signed_out");
       }
+      notifyAuthChange();
     } catch (error) {
       setAuthUser(null);
       setAuthStatus("error");
@@ -235,6 +253,7 @@ export function WalletConnect({
           ? error.message
           : "The server sign-in session could not be read.",
       );
+      notifyAuthChange();
     }
   }, []);
 
@@ -406,10 +425,15 @@ export function WalletConnect({
       const nonceBody: unknown = await nonceResponse.json();
       if (!nonceResponse.ok || !isAuthNonceResponse(nonceBody)) {
         throw new Error(
-          responseError(
-            nonceBody,
-            "The server could not issue a sign-in nonce.",
-          ),
+          nonceResponse.status === 429
+            ? retryAfterMessage(
+                nonceResponse,
+                "Too many sign-in attempts. Try again later.",
+              )
+            : responseError(
+                nonceBody,
+                "The server could not issue a sign-in nonce.",
+              ),
         );
       }
 
@@ -443,15 +467,21 @@ export function WalletConnect({
         !verifyBody.user
       ) {
         throw new Error(
-          responseError(
-            verifyBody,
-            "The server could not verify the wallet signature.",
-          ),
+          verifyResponse.status === 429
+            ? retryAfterMessage(
+                verifyResponse,
+                "Too many sign-in attempts. Try again later.",
+              )
+            : responseError(
+                verifyBody,
+                "The server could not verify the wallet signature.",
+              ),
         );
       }
 
       setAuthUser(verifyBody.user);
       setAuthStatus("signed_in");
+      notifyAuthChange();
       captureAnalytics({
         name: "loomcredit_wallet_flow",
         properties: { stage: "sign_in", outcome: "signed_in" },
@@ -487,6 +517,7 @@ export function WalletConnect({
       }
       setAuthUser(null);
       setAuthStatus("signed_out");
+      notifyAuthChange();
     } catch (error) {
       setAuthStatus("error");
       setMessage(
@@ -572,6 +603,9 @@ export function WalletConnect({
                 The server verified a one-time EIP-191 signature and created
                 this session. No transaction or custody request was made.
               </p>
+              <Link className="wallet-popover-link" href="/review">
+                Open the operator workspace
+              </Link>
               <button
                 className="wallet-retry-button"
                 type="button"

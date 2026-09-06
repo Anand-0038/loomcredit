@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 
 import { DEMO_SAFE_QUOTE } from "@loomcredit/shared";
 import type { FacilityQuote, PolicyEvaluation } from "@loomcredit/shared";
 
 import { demoEvaluation } from "../lib/demo-data";
 import { captureAnalytics } from "../lib/analytics-client";
+import type { DemoTrace } from "../lib/demo-trace";
 
 import { QuoteCard } from "./quote-card";
 
-type DemoMode = "safe" | "unsafe" | "cancelled";
+type DemoMode = "safe" | "unsafe" | "cancelled" | "custom";
+
+interface CustomProposal {
+  advanceBps: number;
+  deliveryDays: number;
+}
 
 const DEMO_REQUEST_TIMEOUT_MS = 5_000;
 
@@ -18,19 +24,37 @@ interface DemoResponse {
   boundary: string;
   quote: FacilityQuote;
   policy: PolicyEvaluation;
+  trace: DemoTrace | null;
 }
 
 export function DemoLab() {
   const [mode, setMode] = useState<DemoMode>("safe");
+  const [customAdvancePercent, setCustomAdvancePercent] = useState("30");
+  const [customDeliveryDays, setCustomDeliveryDays] = useState("45");
   const [result, setResult] = useState<DemoResponse>({
     boundary: "LOCAL_FIXTURE_ONLY",
     quote: DEMO_SAFE_QUOTE,
     policy: demoEvaluation,
+    trace: null,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function evaluate(nextMode: DemoMode) {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const advance = Number(params.get("advance"));
+    const days = Number(params.get("days"));
+    startTransition(() => {
+      if (Number.isInteger(advance) && advance >= 0 && advance <= 100) {
+        setCustomAdvancePercent(String(advance));
+      }
+      if (Number.isInteger(days) && days >= 0 && days <= 365) {
+        setCustomDeliveryDays(String(days));
+      }
+    });
+  }, []);
+
+  async function evaluate(nextMode: DemoMode, customProposal?: CustomProposal) {
     setMode(nextMode);
     setLoading(true);
     setError(null);
@@ -40,24 +64,35 @@ export function DemoLab() {
       DEMO_REQUEST_TIMEOUT_MS,
     );
     try {
+      const requestPayload =
+        nextMode === "custom"
+          ? {
+              mode: nextMode,
+              advanceBps:
+                customProposal?.advanceBps ??
+                Math.round(Number(customAdvancePercent) * 100),
+              deliveryDays:
+                customProposal?.deliveryDays ?? Number(customDeliveryDays),
+            }
+          : { mode: nextMode };
       const response = await fetch("/api/demo/evaluate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode: nextMode }),
+        body: JSON.stringify(requestPayload),
         signal: controller.signal,
       });
-      const body: unknown = await response.json();
-      if (!response.ok || !isDemoResponse(body)) {
+      const responseBody: unknown = await response.json();
+      if (!response.ok || !isDemoResponse(responseBody)) {
         throw new Error(
           "The local evaluation endpoint did not return a valid result.",
         );
       }
-      setResult(body);
+      setResult(responseBody);
       captureAnalytics({
         name: "loomcredit_demo_scenario_run",
         properties: {
           mode: nextMode,
-          outcome: demoOutcome(body.policy.decision),
+          outcome: demoOutcome(responseBody.policy.decision),
           boundary: "local_fixture_only",
         },
       });
@@ -132,6 +167,84 @@ export function DemoLab() {
             <small>lifecycle invalidation</small>
           </button>
         </div>
+        <form
+          className="demo-custom-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const advance = Number(customAdvancePercent);
+            const days = Number(customDeliveryDays);
+            if (
+              !Number.isInteger(advance) ||
+              advance < 0 ||
+              advance > 100 ||
+              !Number.isInteger(days) ||
+              days < 0 ||
+              days > 365
+            ) {
+              setMode("custom");
+              setError(
+                "Use an advance from 0–100% and delivery from 0–365 days.",
+              );
+              return;
+            }
+            void evaluate("custom", {
+              advanceBps: advance * 100,
+              deliveryDays: days,
+            });
+          }}
+        >
+          <div className="demo-custom-heading">
+            <span>Try your own proposal</span>
+            <code className="boundary-code">FIXTURE INPUT</code>
+          </div>
+          <div className="demo-custom-grid">
+            <label>
+              <span>Requested advance</span>
+              <div className="demo-custom-input-suffix">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={customAdvancePercent}
+                  onChange={(event) =>
+                    setCustomAdvancePercent(event.target.value)
+                  }
+                  aria-label="Custom requested advance percentage"
+                />
+                <span>%</span>
+              </div>
+            </label>
+            <label>
+              <span>Delivery tenor</span>
+              <div className="demo-custom-input-suffix">
+                <input
+                  type="number"
+                  min="0"
+                  max="365"
+                  step="1"
+                  value={customDeliveryDays}
+                  onChange={(event) =>
+                    setCustomDeliveryDays(event.target.value)
+                  }
+                  aria-label="Custom delivery tenor in days"
+                />
+                <span>days</span>
+              </div>
+            </label>
+          </div>
+          <button
+            className="button button-secondary demo-custom-submit"
+            type="submit"
+            disabled={loading}
+          >
+            Evaluate this proposal
+          </button>
+          <p>
+            This uses the recorded fixture packet and the local policy engine;
+            it is not a live underwriting quote or a capital request.
+          </p>
+        </form>
         <div className="boundary-note" role="note" aria-live="polite">
           <span className="boundary-note-marker" aria-hidden="true">
             ◆
@@ -165,6 +278,7 @@ export function DemoLab() {
         quote={result.quote}
         evaluation={result.policy}
         boundary={result.boundary}
+        trace={result.trace}
       />
     </div>
   );
@@ -184,6 +298,22 @@ function isDemoResponse(value: unknown): value is DemoResponse {
   return (
     typeof candidate.boundary === "string" &&
     Boolean(candidate.quote) &&
-    Boolean(candidate.policy)
+    Boolean(candidate.policy) &&
+    isDemoTrace(candidate.trace)
+  );
+}
+
+function isDemoTrace(value: unknown): value is DemoTrace {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<DemoTrace>;
+  return (
+    typeof candidate.requestId === "string" &&
+    typeof candidate.evaluatedAt === "string" &&
+    typeof candidate.evaluationDurationMs === "number" &&
+    typeof candidate.inputHash === "string" &&
+    candidate.schemaVersion === "fixture-evaluation-v1" &&
+    candidate.origin === "FIXTURE" &&
+    candidate.boundary === "LOCAL_FIXTURE_ONLY" &&
+    typeof candidate.policyVersion === "string"
   );
 }

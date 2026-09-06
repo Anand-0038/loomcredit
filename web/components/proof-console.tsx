@@ -6,7 +6,10 @@ import {
 import Link from "next/link";
 
 import { StageRail } from "./stage-rail";
-import { liveEvidence } from "../lib/live-evidence";
+import {
+  hasRecordedRiskGuardApproval,
+  liveEvidence,
+} from "../lib/live-evidence";
 import { shortenId } from "../lib/demo-data";
 
 export function ProofConsole({
@@ -28,7 +31,9 @@ export function ProofConsole({
           An advance can move only after the source event is registered,
           checked, and bound to one order.{" "}
           {live
-            ? "This packet is live testnet evidence; the quote step remains separate."
+            ? hasRecordedRiskGuardApproval()
+              ? "This packet includes a recorded signed RiskGuard approval; it is testnet accounting state, not a loan."
+              : "This packet is live testnet evidence; the quote step remains separate."
             : "This console is a local fixture, not a live transaction."}
         </p>
         <dl className="console-list">
@@ -71,7 +76,9 @@ export function ProofConsole({
             />
             <span>
               {live
-                ? "Attestcoin proved the evidence. RiskGuard still controls the action."
+                ? hasRecordedRiskGuardApproval()
+                  ? "Attestcoin proved the evidence. RiskGuard recorded a bounded testnet approval."
+                  : "Attestcoin proved the evidence. RiskGuard still controls the action."
                 : "Attestcoin proves the evidence. RiskGuard controls the action."}
             </span>
           </div>

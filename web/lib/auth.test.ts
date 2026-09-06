@@ -6,6 +6,7 @@ import {
   isTrustedAuthOrigin,
   requestAuthOrigin,
   roleForAddress,
+  sessionRoleIsCurrent,
 } from "./auth";
 
 type AuthTestEnvironment = {
@@ -118,5 +119,36 @@ describe("role resolution", () => {
     expect(() => {
       parseChainId("1115.5111");
     }).toThrow(AuthProtocolError);
+  });
+
+  it("detects when a persisted session no longer matches the operator allowlist", () => {
+    const address = "0x52908400098527886E0F7030069857D2E4169EE7";
+    const session = { address, role: "operator" as const };
+
+    expect(
+      sessionRoleIsCurrent(session, {
+        AUTH_OPERATOR_ADDRESSES: address,
+      } as unknown as NodeJS.ProcessEnv),
+    ).toBe(true);
+    expect(
+      sessionRoleIsCurrent(session, {
+        AUTH_OPERATOR_ADDRESSES: "",
+      } as unknown as NodeJS.ProcessEnv),
+    ).toBe(false);
+  });
+
+  it("detects when a viewer session is promoted by configuration", () => {
+    const address = "0x27b1fdb04752bbc536007a920d24acb045561c26";
+
+    expect(
+      sessionRoleIsCurrent({ address, role: "viewer" }, {
+        AUTH_OPERATOR_ADDRESSES: address,
+      } as unknown as NodeJS.ProcessEnv),
+    ).toBe(false);
+    expect(
+      sessionRoleIsCurrent({ address, role: "viewer" }, {
+        AUTH_OPERATOR_ADDRESSES: "",
+      } as unknown as NodeJS.ProcessEnv),
+    ).toBe(true);
   });
 });

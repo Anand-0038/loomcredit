@@ -35,6 +35,28 @@ afterEach(() => {
 });
 
 describe("api /api/auth/sign-out", () => {
+  it("rejects a cross-origin sign-out before revoking the session", async () => {
+    isTrustedAuthOrigin.mockReturnValue(false);
+    requestAuthOrigin.mockReturnValue("https://app.example");
+
+    const response = await POST(
+      new Request("https://app.example/api/auth/sign-out", {
+        method: "POST",
+        headers: { cookie: "loomcredit_session=abc-session-token" },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toEqual({
+      boundary: "AUTHENTICATION",
+      code: "ORIGIN_REJECTED",
+      error:
+        "This authentication request did not come from the configured application origin.",
+    });
+    expect(revokeSession).not.toHaveBeenCalled();
+  });
+
   it("returns AUTH_CONFIGURATION when auth origin environment is invalid", async () => {
     isTrustedAuthOrigin.mockImplementation(() => {
       throw new AuthProtocolError(

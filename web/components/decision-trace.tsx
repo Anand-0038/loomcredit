@@ -1,15 +1,18 @@
 import type { FacilityQuote, PolicyEvaluation } from "@loomcredit/shared";
 
 import { shortenId } from "../lib/demo-data";
+import type { DemoTrace } from "../lib/demo-trace";
 
 export function DecisionTrace({
   quote,
   evaluation,
   boundary,
+  trace,
 }: {
   quote: FacilityQuote;
   evaluation: PolicyEvaluation;
   boundary: string;
+  trace?: DemoTrace | null;
 }) {
   const fixture = boundary.startsWith("LOCAL_");
   const passed = evaluation.checks.filter(
@@ -26,7 +29,7 @@ export function DecisionTrace({
     <section className="decision-trace" aria-labelledby="decision-trace-title">
       <div className="decision-trace-header">
         <div>
-          <span className="eyebrow">Judge-readable handoff</span>
+          <span className="eyebrow">Operator handoff</span>
           <h3 id="decision-trace-title">Decision trace</h3>
         </div>
         <code className="boundary-code">{boundary}</code>
@@ -90,7 +93,8 @@ export function DecisionTrace({
               {notRequested > 0 ? ` · ${notRequested} not requested` : ""}
             </strong>
             <small>
-              Policy {quote.policyVersion} · {quote.reasonCodes.join(" · ")}
+              Policy {quote.policyVersion} ·{" "}
+              {evaluation.failureCode ?? quote.reasonCodes.join(" · ")}
             </small>
           </div>
           <span
@@ -119,6 +123,56 @@ export function DecisionTrace({
           </span>
         </li>
       </ol>
+      {trace ? (
+        <>
+          <dl className="decision-trace-meta">
+            <div>
+              <dt>Request ID</dt>
+              <dd>{shortenId(trace.requestId, 12, 8)}</dd>
+            </div>
+            <div>
+              <dt>Evaluated at</dt>
+              <dd>{formatTimestamp(trace.evaluatedAt)}</dd>
+            </div>
+            <div>
+              <dt>Evaluation time</dt>
+              <dd>{trace.evaluationDurationMs} ms</dd>
+            </div>
+            <div>
+              <dt>Input hash</dt>
+              <dd>{shortenId(trace.inputHash, 12, 10)}</dd>
+            </div>
+            <div>
+              <dt>Schema</dt>
+              <dd>{trace.schemaVersion}</dd>
+            </div>
+            <div>
+              <dt>Origin</dt>
+              <dd>
+                {trace.origin} · {trace.boundary}
+              </dd>
+            </div>
+          </dl>
+          <details className="decision-trace-raw">
+            <summary>View raw trace JSON</summary>
+            <pre>{JSON.stringify(trace, null, 2)}</pre>
+          </details>
+        </>
+      ) : (
+        <p className="decision-trace-pending">
+          Run a scenario to capture a request ID, timestamp, input hash, and
+          evaluation boundary for this decision.
+        </p>
+      )}
     </section>
   );
+}
+
+function formatTimestamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Invalid timestamp";
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  }).format(date);
 }

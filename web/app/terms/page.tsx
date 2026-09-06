@@ -28,9 +28,8 @@ export default function TermsPage() {
           By accessing the current LoomCredit website or repository materials,
           you agree to use them only for lawful evaluation, development,
           security review, and testnet experimentation. These terms are a draft
-          baseline for the prototype and are not complete until the operator,
-          governing law, contact channel, and final limitation language are
-          completed and reviewed by qualified counsel.
+          baseline for the prototype, not a complete consumer or commercial
+          agreement.
         </p>
       </LegalSection>
 
@@ -117,19 +116,26 @@ export default function TermsPage() {
 
       <LegalSection title="8. Governing law and contact">
         <p>
-          The governing-law and dispute-resolution fields are intentionally
-          configuration-driven and are not asserted here until the operator
-          chooses a legal entity and jurisdiction. Do not rely on this draft as
-          a complete contract.
+          The governing law and dispute process for a future production service
+          will be stated in its final published terms. Until then, these terms
+          apply only as a prototype-use notice and do not create a lending or
+          commercial agreement.
         </p>
+        <p>Governing law: {config.governingLaw || "Pending publication."}</p>
         <p>
-          Configured governing law: {config.governingLaw || "not configured"}.
-        </p>
-        <p>
-          The configured legal contact is{" "}
-          {config.contactEmail || "not configured"}. See the{" "}
-          <a href="/privacy">privacy policy</a> for data-request handling and{" "}
-          <a href="/legal">the legal center</a> for launch status.
+          {config.contactEmail ? (
+            <>
+              Legal contact:{" "}
+              <a href={`mailto:${config.contactEmail}`}>
+                {config.contactEmail}
+              </a>
+              .
+            </>
+          ) : (
+            "The legal contact will be included in the final published terms."
+          )}{" "}
+          See the <a href="/privacy">privacy policy</a> for data-request
+          handling and <a href="/legal">the legal center</a> for launch status.
         </p>
       </LegalSection>
     </LegalShell>

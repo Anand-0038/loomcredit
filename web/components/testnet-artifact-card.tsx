@@ -10,9 +10,14 @@ import {
   formatSourceMinorUnits,
   sourceTestnetEvidence,
 } from "../lib/source-evidence";
-import { liveEvidence } from "../lib/live-evidence";
+import {
+  hasRecordedRiskGuardApproval,
+  liveEvidence,
+  recordedRiskGuardReceipt,
+} from "../lib/live-evidence";
 
 export function TestnetArtifactCard() {
+  const riskGuardReceipt = recordedRiskGuardReceipt();
   return (
     <section
       className="testnet-artifact"
@@ -27,8 +32,10 @@ export function TestnetArtifactCard() {
           <p>
             A real Sepolia <code>OrderGuaranteed</code> transaction was proved
             by the worker and registered on Creditcoin CC3. The evidence ID and
-            both receipts are linked below; quote execution remains a separate
-            policy step.
+            both receipts are linked below.{" "}
+            {hasRecordedRiskGuardApproval()
+              ? "A signed RiskGuard approval is also recorded as accounting-only testnet state; it is not a loan."
+              : "Quote execution remains a separate policy step."}
           </p>
         </div>
         <span className="status-pill">
@@ -118,6 +125,26 @@ export function TestnetArtifactCard() {
             </small>
           </span>
         </div>
+        {riskGuardReceipt ? (
+          <div className="testnet-artifact-check">
+            <CheckCircle size={18} weight="bold" aria-hidden="true" />
+            <span>
+              <strong>RiskGuard approval</strong>
+              <small>
+                <a
+                  href={riskGuardReceipt.explorer}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  QuoteApproved receipt{" "}
+                  <ArrowUpRight size={12} aria-hidden="true" />
+                </a>
+                <br />
+                <code>SANDBOX_RESERVED · NO_CAPITAL_MOVED</code>
+              </small>
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <p className="testnet-artifact-note">

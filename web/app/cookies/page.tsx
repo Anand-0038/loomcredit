@@ -40,7 +40,7 @@ export default function CookiesPage() {
         <LegalList
           items={[
             "No first-party advertising cookies.",
-            "No PostHog analytics is initialized unless the operator configures it and the visitor explicitly opts in.",
+            "No PostHog analytics is initialized unless optional analytics is enabled and the visitor explicitly opts in.",
             "The optional analytics path disables autocapture, automatic pageviews, session replay, person profiles, and browser persistence.",
             "No local-storage copy of the server session token is created by the app.",
             "The deterministic local demo does not need a cookie, model request, wallet transaction, or blockchain call.",

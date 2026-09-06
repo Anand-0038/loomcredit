@@ -41,31 +41,35 @@ export function LegalShell({
             >
               <strong>
                 {config.isPublishable
-                  ? "Publication configuration present"
-                  : "Prototype legal baseline — owner details required"}
+                  ? "Legal details available"
+                  : "Prototype notice"}
               </strong>
               <p>
                 {config.isPublishable
                   ? "These pages still require jurisdiction-specific legal review before the service is used for lending, regulated credit intermediation, or customer data beyond the narrow prototype flow."
-                  : "The wording is written for the current testnet prototype, but it is not a final legal contract. Configure the operator identity, public contact, address, governing law, and effective date before publishing a public release."}
+                  : "This page describes the current testnet prototype. It is not a final legal agreement or legal advice."}
               </p>
             </div>
             <dl className="legal-meta">
               <div>
                 <dt>Operator</dt>
-                <dd>{config.entityName ?? "Not configured"}</dd>
+                <dd>{config.entityName ?? "LoomCredit prototype"}</dd>
               </div>
               <div>
                 <dt>Effective date</dt>
-                <dd>{formatLegalDate(config.effectiveDate)}</dd>
+                <dd>
+                  {config.effectiveDate
+                    ? formatLegalDate(config.effectiveDate)
+                    : "Pending publication"}
+                </dd>
               </div>
               <div>
                 <dt>Public address</dt>
-                <dd>{config.entityAddress ?? "Not configured"}</dd>
+                <dd>{config.entityAddress ?? "Pending publication"}</dd>
               </div>
               <div>
                 <dt>Governing law</dt>
-                <dd>{config.governingLaw ?? "Not configured"}</dd>
+                <dd>{config.governingLaw ?? "Pending publication"}</dd>
               </div>
             </dl>
             {children}
@@ -102,15 +106,15 @@ export function LegalShell({
             </div>
             <div className="surface-card legal-contact-card">
               <span className="eyebrow">Questions or requests</span>
-              <h2>Use the configured legal contact.</h2>
+              <h2>Need to get in touch?</h2>
               {contactHref ? (
                 <a className="text-link" href={contactHref}>
                   {config.contactEmail}
                 </a>
               ) : (
                 <p>
-                  No public legal contact is configured yet. Set
-                  <code>LEGAL_CONTACT_EMAIL</code> before launch.
+                  The public legal contact will be listed here in the final
+                  notice.
                 </p>
               )}
             </div>

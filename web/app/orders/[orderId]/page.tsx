@@ -92,7 +92,7 @@ export default async function OrderPage({
             </p>
             <Link className="text-link" href="/demo">
               <CaretLeft size={16} weight="bold" aria-hidden="true" /> Back to
-              the demo lab
+              the policy lab
             </Link>
           </div>
         </section>
@@ -108,7 +108,7 @@ export default async function OrderPage({
       <section className="page-hero">
         <div className="container">
           <Link className="text-link" href="/demo">
-            <CaretLeft size={16} weight="bold" aria-hidden="true" /> Demo lab
+            <CaretLeft size={16} weight="bold" aria-hidden="true" /> Policy lab
           </Link>
           <h1>
             {isLiveEvidence
@@ -182,7 +182,9 @@ export default async function OrderPage({
                         href={`/proof/${order.evidenceId}`}
                         aria-label="Open the live evidence proof console"
                       >
-                        {order.status}
+                        {order.status === "RESERVED"
+                          ? "SANDBOX_RESERVED"
+                          : order.status}
                       </Link>
                     ) : (
                       order.status
@@ -192,8 +194,9 @@ export default async function OrderPage({
               </dl>
               {isLiveEvidence ? (
                 <div className="callout">
-                  <strong>Transaction record:</strong> recorded on testnet after
-                  successful source and CC3 operations.
+                  <strong>Transaction record:</strong> source and CC3 receipts
+                  are recorded on testnet. Any `RESERVED` state is an
+                  accounting-only sandbox record; no capital moved.
                   <div style={{ marginTop: 8 }}>
                     <a
                       className="text-link"

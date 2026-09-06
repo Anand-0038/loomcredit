@@ -1,6 +1,7 @@
 import { CheckCircle } from "@phosphor-icons/react/dist/ssr";
 
 import { demoStages } from "../lib/demo-data";
+import { hasRecordedRiskGuardApproval } from "../lib/live-evidence";
 
 type StageStatus = "verified" | "fixture" | "next";
 
@@ -10,31 +11,58 @@ type Stage = {
   status: StageStatus;
 };
 
+const recordedRiskGuardApproval = hasRecordedRiskGuardApproval();
+
 const liveStages = [
   {
-    title: "Source event",
+    title: "Ethereum source event",
     description: "OrderGuaranteed · Sepolia receipt",
     status: "verified",
   },
   {
-    title: "USC proof",
+    title: "Attestcoin / USC proof",
     description: "Attestation and continuity proof retrieved",
     status: "verified",
   },
   {
-    title: "Facility registry",
-    description: "EVIDENCE_VERIFIED · CC3 state read back",
+    title: "Creditcoin verification",
+    description: "Native verifier accepted the source proof",
     status: "verified",
   },
   {
-    title: "RiskGuard",
-    description: "Awaiting a signed underwriting quote",
-    status: "next",
+    title: "Registered evidence",
+    description: "EVIDENCE_VERIFIED · CC3 state read back",
+    status: "verified",
   },
+  recordedRiskGuardApproval
+    ? {
+        title: "AI proposal",
+        description: "Structured quote bound to verified evidence",
+        status: "verified",
+      }
+    : {
+        title: "AI proposal",
+        description: "Requires verified evidence and model response",
+        status: "next",
+      },
+  recordedRiskGuardApproval
+    ? {
+        title: "RiskGuard decision",
+        description: "QuoteApproved · CC3 receipt read back",
+        status: "verified",
+      }
+    : {
+        title: "RiskGuard decision",
+        description: "Awaiting a signed underwriting quote",
+        status: "next",
+      },
 ] satisfies Stage[];
 
 export function StageRail({ mode = "local" }: { mode?: "local" | "live" }) {
   const stages: Stage[] = mode === "live" ? liveStages : demoStages;
+  const verifiedCount = stages.filter(
+    (stage) => stage.status === "verified",
+  ).length;
   return (
     <div className="proof-stage-panel">
       <div className="proof-stage-heading">
@@ -43,7 +71,11 @@ export function StageRail({ mode = "local" }: { mode?: "local" | "live" }) {
             ? "Live verification sequence"
             : "Local policy sequence"}
         </span>
-        <span>{mode === "live" ? "3 verified · 1 next" : "fixture only"}</span>
+        <span>
+          {mode === "live"
+            ? `${verifiedCount} verified${verifiedCount < stages.length ? ` · ${stages.length - verifiedCount} next` : ""}`
+            : "fixture only"}
+        </span>
       </div>
       <ol
         className="proof-stage-list"
