@@ -8,9 +8,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env scripts/dev-local.mjs",
+    "dev": "node api.js && node --env-file-if-exists=.env scripts/dev-local.mjs",
     "start:render": "node --env-file-if-exists=.env scripts/render-start.mjs",
-    "build": "corepack pnpm --filter @loomcredit/web build",
+    "build": "node api.js && corepack pnpm --filter @loomcredit/web build",
     "lint": "corepack pnpm --filter @loomcredit/web lint",
     "typecheck": "corepack pnpm --recursive typecheck",
     "test": "corepack pnpm --recursive test",
