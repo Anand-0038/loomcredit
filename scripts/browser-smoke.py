@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 from pathlib import Path
+from urllib.parse import urlparse
 from playwright.sync_api import Page, sync_playwright
 
 
@@ -9,6 +10,8 @@ BASE_URL = os.environ.get("LOOMCREDIT_BASE_URL", "http://localhost:3000").rstrip
     "/"
 )
 EXPECTED_SITE_URL = os.environ.get("LOOMCREDIT_SITE_URL", BASE_URL).rstrip("/")
+EXPECTED_SITE_HOST = urlparse(EXPECTED_SITE_URL).hostname
+PUBLIC_TARGET = EXPECTED_SITE_HOST not in {"localhost", "127.0.0.1", None}
 EVIDENCE_MANIFEST = json.loads(
     (Path(__file__).resolve().parent.parent / "docs/demo-evidence.json").read_text()
 )
@@ -321,10 +324,17 @@ def main() -> None:
 
         robots = context.request.get(BASE_URL + "/robots.txt")
         assert robots.ok
-        assert "Disallow: /" in robots.text()
         sitemap = context.request.get(BASE_URL + "/sitemap.xml")
         assert sitemap.ok
-        assert "<url>" not in sitemap.text()
+        if PUBLIC_TARGET:
+            assert "Allow: /" in robots.text()
+            assert "Disallow: /\n" not in robots.text()
+            assert f"Sitemap: {EXPECTED_SITE_URL}/sitemap.xml" in robots.text()
+            assert f"<loc>{EXPECTED_SITE_URL}/</loc>" in sitemap.text()
+            assert "<url>" in sitemap.text()
+        else:
+            assert "Disallow: /" in robots.text()
+            assert "<url>" not in sitemap.text()
         llms = context.request.get(BASE_URL + "/llms.txt")
         assert llms.ok
         assert "LIVE_VERIFIED" in llms.text()
