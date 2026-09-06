@@ -56,13 +56,13 @@ visible rather than implied away.
 
 The primary product path is **Review a case**, not the local policy lab:
 
-1. Open [`/review`](http://localhost:3000/review), connect the operator wallet,
+1. Open the [live review workspace](https://loomcredit.onrender.com/review), connect the operator wallet,
    and sign in with the server-issued message. The recorded reference below the
    intake form is read-only; it helps orient a new operator without pretending
    to create a case.
 2. Enter a source transaction plus the requested advance and delivery tenor,
    then submit the case. The authenticated account can return to the [`case
-inbox`](http://localhost:3000/cases) at any time; search and workflow filters
+inbox`](https://loomcredit.onrender.com/cases) at any time; search and workflow filters
    surface cases that need evidence recovery, a proposal, or human review.
 3. Open the case detail page. It is the operational center: source-receipt
    facts (buyer, supplier, order value, guarantee, due date, chain, and nonce)
@@ -114,11 +114,14 @@ Verified testnet artifacts in this checkout:
   correction and must be redeployed before claiming the corrected lifecycle as
   live.
 
-Still blocked by external setup:
+Current public boundary:
 
-- Prototype video/whitepaper publication and human-owned submission fields.
-- The hosted Render revision is older than this local correction set and must
-  be rebuilt and redeployed before the hosted UI can be described as current.
+- GitHub `main` and the hosted Render application are aligned; the public
+  operator routes, APIs, evidence feed, and whitepaper pass the browser smoke
+  suite.
+- The existing Vimeo video must be checked against this release before it is
+  treated as the final submission recording. Human-owned DoraHacks fields also
+  remain outside the repository.
 - The deployed bytecode predates the current lifecycle correction and
   `QuoteDecisionAudited`; the evidence records the backwards-compatible
   `QuoteApproved` receipt without claiming newer source behavior as deployed.

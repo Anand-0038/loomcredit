@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node init && next dev",
+    "build": "node init && next build",
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

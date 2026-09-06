@@ -8,9 +8,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env scripts/dev-local.mjs",
-    "start:render": "node --env-file-if-exists=.env scripts/render-start.mjs",
-    "build": "corepack pnpm --filter @loomcredit/web build",
+    "dev": "node init && node --env-file-if-exists=.env scripts/dev-local.mjs",
+    "start:render": "node init && node --env-file-if-exists=.env scripts/render-start.mjs",
+    "build": "node init && corepack pnpm --filter @loomcredit/web build",
     "lint": "corepack pnpm --filter @loomcredit/web lint",
     "typecheck": "corepack pnpm --recursive typecheck",
     "test": "corepack pnpm --recursive test",
@@ -25,7 +25,7 @@
     "deploy:source": "node --env-file-if-exists=.env scripts/deploy-source.mjs",
     "deploy:creditcoin": "node --env-file-if-exists=.env scripts/deploy-creditcoin.mjs",
     "seed:source-order": "node --env-file-if-exists=.env scripts/seed-source-order.mjs",
-    "build:evidence-packet": "node --env-file-if-exists=.env scripts/build-evidence-packet.mjs",
+    "build:evidence-packet": "node init && node --env-file-if-exists=.env scripts/build-evidence-packet.mjs",
     "evidence:manifest": "node --env-file-if-exists=.env scripts/build-demo-evidence.mjs",
     "submission:preflight": "node --env-file-if-exists=.env scripts/submission-preflight.mjs",
     "demo:hostile-quote": "node --env-file-if-exists=.env scripts/hostile-quote-demo.mjs",
