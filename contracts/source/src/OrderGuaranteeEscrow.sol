@@ -72,6 +72,7 @@ contract OrderGuaranteeEscrow {
     error InvalidGuarantee();
     error InvalidDeadline();
     error InvalidTerms();
+    error InvalidIdentityCommitment();
     error OrderAlreadyExists();
     error Unauthorized();
     error InvalidState();
@@ -88,6 +89,10 @@ contract OrderGuaranteeEscrow {
         }
         if (input.deliveryDeadline <= block.timestamp) revert InvalidDeadline();
         if (input.termsCommitment == bytes32(0)) revert InvalidTerms();
+        if (
+            input.buyerIdentityCommitment == bytes32(0)
+                || input.supplierIdentityCommitment == bytes32(0)
+        ) revert InvalidIdentityCommitment();
         if (orders[input.orderId].state != OrderState.None) revert OrderAlreadyExists();
 
         bool transferred = IERC20Minimal(input.settlementToken)

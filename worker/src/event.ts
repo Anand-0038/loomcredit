@@ -57,6 +57,8 @@ export function createEvent(
     evidenceId: null,
     creditcoinTxHash: null,
     lastError: null,
+    sourceOrder: null,
+    provenance: "WORKER_LIVE",
     stageTimestamps: { DETECTED: now },
     createdAt: now,
     updatedAt: now,

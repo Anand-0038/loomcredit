@@ -8,6 +8,7 @@ import {
 import type { WorkerConfig } from "./config.js";
 import type {
   SourceOrderEvent,
+  SourceOrderLifecycle,
   SourceOrderGuaranteed,
   SourceProof,
 } from "./proof.js";
@@ -18,9 +19,9 @@ import { configureRpcTransport } from "./network.js";
 const TRADE_EVIDENCE_ABI = [
   "function verifyOrderGuaranteed((uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) proof,(bytes32 orderId,address buyer,address supplier,address settlementToken,uint128 orderValue,uint128 guaranteeAmount,uint64 deliveryDeadline,bytes32 termsCommitment,bytes32 buyerIdentityCommitment,bytes32 supplierIdentityCommitment,uint64 nonce,uint64 logIndex) expected) returns (bytes32 evidenceId)",
   "event OrderEvidenceVerified(bytes32 indexed evidenceId,bytes32 indexed orderId,bytes32 queryKey)",
-  "function verifyOrderCancelled((uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) proof,bytes32 expectedOrderId,uint64 expectedLogIndex)",
-  "function verifyOrderDisputed((uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) proof,bytes32 expectedOrderId,uint64 expectedLogIndex)",
-  "function verifyOrderSettled((uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) proof,bytes32 expectedOrderId,uint64 expectedLogIndex)",
+  "function verifyOrderCancelled((uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) proof,(bytes32 orderId,bytes32 reasonCommitment,uint64 logIndex) expected)",
+  "function verifyOrderDisputed((uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) proof,(bytes32 orderId,bytes32 disputeCommitment,uint64 logIndex) expected)",
+  "function verifyOrderSettled((uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) proof,(bytes32 orderId,uint256 settlementAmount,bytes32 settlementReference,uint64 logIndex) expected)",
   "event LifecycleEvidenceVerified(bytes32 indexed orderId,uint8 state,bytes32 queryKey)",
 ];
 
@@ -78,6 +79,39 @@ function lifecycleFunction(
   if (eventType === "ORDER_DISPUTED") return "verifyOrderDisputed";
   if (eventType === "ORDER_SETTLED") return "verifyOrderSettled";
   throw new Error(`Unsupported lifecycle event type: ${eventType}`);
+}
+
+function toLifecycleTuple(event: SourceOrderLifecycle): readonly unknown[] {
+  if (event.eventType === "ORDER_CANCELLED") {
+    if (!event.reasonCommitment) {
+      throw new TerminalWorkerError(
+        "Source cancellation event is missing reasonCommitment",
+      );
+    }
+    return [event.orderId, event.reasonCommitment, event.logIndex];
+  }
+  if (event.eventType === "ORDER_DISPUTED") {
+    if (!event.disputeCommitment) {
+      throw new TerminalWorkerError(
+        "Source dispute event is missing disputeCommitment",
+      );
+    }
+    return [event.orderId, event.disputeCommitment, event.logIndex];
+  }
+  if (
+    event.settlementAmount === undefined ||
+    event.settlementReference === undefined
+  ) {
+    throw new TerminalWorkerError(
+      "Source settlement event is missing settlement payload",
+    );
+  }
+  return [
+    event.orderId,
+    event.settlementAmount,
+    event.settlementReference,
+    event.logIndex,
+  ];
 }
 
 function lifecycleState(eventType: SourceEventType): number {
@@ -170,7 +204,7 @@ export class CreditcoinSubmitter {
           ])
         : tradeEvidenceInterface.encodeFunctionData(
             lifecycleFunction(event.eventType),
-            [toProofTuple(proof), event.orderId, event.logIndex],
+            [toProofTuple(proof), toLifecycleTuple(event)],
           );
     const gasLimit = await this.estimateGas(data, proof.continuityRoots.length);
     const transaction = await this.wallet.sendTransaction({

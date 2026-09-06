@@ -21,6 +21,7 @@ import {
 } from "./deployment-utils.mjs";
 
 const CREDITCOIN_CHAIN_ID = 102031;
+const MAX_FEE_BPS = 1_000;
 const RISK_GUARD_ABI = [
   "function submitQuote((bytes32 orderId,bytes32 decision,uint16 advanceBps,uint16 feeBps,uint64 expiresAt,bytes32 evidenceId,bytes32 reasonCodesHash,bytes32 policyVersion,bytes32 modelVersion,uint64 nonce) quote,bytes signature) returns (uint256 amount)",
   "function approvedSigners(address signer) view returns (bool)",
@@ -199,6 +200,11 @@ function validateSignedPayload(payload, expectedChainId) {
     expiresAt: parseUint(quote.expiresAt, "expiresAt", (1n << 64n) - 1n),
     nonce: parseUint(quote.nonce, "nonce", (1n << 64n) - 1n),
   };
+  if (normalizedQuote.feeBps > MAX_FEE_BPS) {
+    throw new Error(
+      `INPUT_INVALID: feeBps must not exceed ${MAX_FEE_BPS} basis points`,
+    );
+  }
   const signingDomain = {
     name: "LoomCredit RiskGuard",
     version: "1",

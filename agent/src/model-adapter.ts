@@ -1,6 +1,7 @@
 import {
   FacilityQuoteSchema,
   MODEL_VERSION,
+  POLICY,
   POLICY_VERSION,
   REASON_CODES,
   type EvidencePacket,
@@ -41,7 +42,7 @@ const FACILITY_QUOTE_JSON_SCHEMA = {
   properties: {
     decision: { type: "string", enum: ["APPROVE", "REFER", "REJECT"] },
     advanceBps: { type: "integer", minimum: 0, maximum: 10_000 },
-    feeBps: { type: "integer", minimum: 0, maximum: 10_000 },
+    feeBps: { type: "integer", minimum: 0, maximum: POLICY.maxFeeBps },
     expiresAt: { type: "integer", minimum: 1 },
     riskTier: { type: "string", enum: ["A", "B", "C", "REFER"] },
     reasonCodes: {
@@ -117,7 +118,7 @@ export class OpenAICompatibleQuoteAdapter implements QuoteModelAdapter {
           messages: [
             {
               role: "system",
-              content: `Return exactly one top-level JSON object matching the loomcredit_facility_quote schema. Do not wrap it in facilityQuote, evidence, quote, or any other key. Set modelVersion exactly to ${MODEL_VERSION}. Set policyVersion exactly to ${POLICY_VERSION}. Use exactly one evidence ID from the packet. Choose numeric quote values only from the packet and never invent evidence. Use decision APPROVE only when you can justify a positive advance; an APPROVE quote must have advanceBps at least 1. If a positive advance cannot be justified, use REFER or REJECT instead. Never return APPROVE with advanceBps 0. Current Unix time is ${now}; expiresAt must be an integer from ${now} through ${now + 600}. I will parse this response programmatically.`,
+              content: `Return exactly one top-level JSON object matching the loomcredit_facility_quote schema. Do not wrap it in facilityQuote, evidence, quote, or any other key. Set modelVersion exactly to ${MODEL_VERSION}. Set policyVersion exactly to ${POLICY_VERSION}. Use exactly one evidence ID from the packet. Choose numeric quote values only from the packet and never invent evidence. Use decision APPROVE only when you can justify a positive advance; an APPROVE quote must have advanceBps at least 1. If a positive advance cannot be justified, use REFER or REJECT instead. Never return APPROVE with advanceBps 0. Keep feeBps at or below ${POLICY.maxFeeBps}. Current Unix time is ${now}; expiresAt is infrastructure-controlled and will be normalized to a ${POLICY.quoteTtlSeconds}-second window after validation. I will parse this response programmatically.`,
             },
             { role: "user", content: JSON.stringify(packet) },
           ],
@@ -154,7 +155,11 @@ export class OpenAICompatibleQuoteAdapter implements QuoteModelAdapter {
         `Model quote failed schema validation: ${parsedQuote.error.message}`,
       );
     }
-    return parsedQuote.data;
+    return {
+      ...parsedQuote.data,
+      // The model proposes credit terms; infrastructure owns quote freshness.
+      expiresAt: now + POLICY.quoteTtlSeconds,
+    };
   }
 }
 

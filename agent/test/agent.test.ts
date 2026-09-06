@@ -114,18 +114,13 @@ describe("underwriting agent", () => {
   });
 
   it("does not make a zero-value model approval eligible for signing", async () => {
-    const result = await generateQuote(
-      { ...DEMO_EVIDENCE_PACKET, proofStatus: "LIVE_VERIFIED" },
-      { generateQuote: async () => ({ ...DEMO_SAFE_QUOTE, advanceBps: 0 }) },
-      1_786_200_000,
-    );
-
-    expect(result.mode).toBe("MODEL");
-    expect(result.policy?.decision).toBe("REJECTED");
-    expect(result.policy?.failureCode).toBe("ZERO_ADVANCE");
-    expect(() => assertQuoteCanBeSigned(result)).toThrow(
-      "deterministic policy",
-    );
+    await expect(
+      generateQuote(
+        { ...DEMO_EVIDENCE_PACKET, proofStatus: "LIVE_VERIFIED" },
+        { generateQuote: async () => ({ ...DEMO_SAFE_QUOTE, advanceBps: 0 }) },
+        1_786_200_000,
+      ),
+    ).rejects.toThrow("APPROVE quotes must request a positive advance");
   });
 
   it("never signs the local fixture boundary", () => {

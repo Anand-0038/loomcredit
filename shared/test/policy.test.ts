@@ -12,10 +12,11 @@ import {
 const inputFor = (quote = DEMO_SAFE_QUOTE) => ({
   orderValueMinor: DEMO_EVIDENCE_PACKET.orderValueMinor,
   guaranteeAmountMinor: DEMO_EVIDENCE_PACKET.guaranteeAmountMinor,
-  deliveryDeadline: DEMO_NOW + DEMO_EVIDENCE_PACKET.tenorDays * 86_400,
+  deliveryDeadline: DEMO_EVIDENCE_PACKET.deliveryDeadline,
   now: DEMO_NOW,
   decision: quote.decision,
   advanceBps: quote.advanceBps,
+  feeBps: quote.feeBps,
   quoteExpiresAt: quote.expiresAt,
   buyerExposureMinor: DEMO_EVIDENCE_PACKET.openBuyerExposureMinor,
   portfolioCapacityMinor: 10_000_000,
@@ -53,6 +54,25 @@ describe("RiskGuard policy", () => {
     expect(result.approvedAdvanceMinor).toBe(0);
   });
 
+  it("rejects a fee above the shared policy cap", () => {
+    const result = evaluateQuote(
+      inputFor({ ...DEMO_SAFE_QUOTE, feeBps: 1_001 }),
+    );
+
+    expect(result.decision).toBe("REJECTED");
+    expect(result.failureCode).toBe("FEE_LIMIT");
+  });
+
+  it("requires a useful minimum quote lifetime", () => {
+    const result = evaluateQuote({
+      ...inputFor(),
+      quoteExpiresAt: DEMO_NOW + 1,
+    });
+
+    expect(result.decision).toBe("REJECTED");
+    expect(result.failureCode).toBe("QUOTE_EXPIRED");
+  });
+
   it("rejects a zero-value approval before it can be signed", () => {
     const result = evaluateQuote(
       inputFor({ ...DEMO_SAFE_QUOTE, advanceBps: 0 }),
@@ -66,6 +86,23 @@ describe("RiskGuard policy", () => {
   it("rejects a cancelled facility", () => {
     const result = evaluateQuote({ ...inputFor(), state: "CANCELLED" });
     expect(result.failureCode).toBe("INVALID_STATE");
+  });
+
+  it("rejects an already quoted facility because RiskGuard requires fresh evidence", () => {
+    const result = evaluateQuote({ ...inputFor(), state: "QUOTED" });
+
+    expect(result.decision).toBe("REJECTED");
+    expect(result.failureCode).toBe("INVALID_STATE");
+  });
+
+  it("rejects a deadline that expired less than one day ago", () => {
+    const result = evaluateQuote({
+      ...inputFor(),
+      deliveryDeadline: DEMO_NOW - 1,
+    });
+
+    expect(result.decision).toBe("REJECTED");
+    expect(result.failureCode).toBe("TENOR_LIMIT");
   });
 
   it("does not approve a reject decision with otherwise safe terms", () => {

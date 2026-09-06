@@ -196,11 +196,15 @@ contract FacilityRegistry {
             valid = previousState == FacilityState.EvidenceVerified;
         } else if (nextState == FacilityState.Reserved) {
             valid = previousState == FacilityState.Quoted || previousState == FacilityState.EvidenceVerified;
-        } else if (nextState == FacilityState.Cancelled || nextState == FacilityState.Disputed) {
+        } else if (nextState == FacilityState.Cancelled) {
+            valid = previousState == FacilityState.EvidenceVerified || previousState == FacilityState.Quoted
+                || previousState == FacilityState.Reserved || previousState == FacilityState.Disputed;
+        } else if (nextState == FacilityState.Disputed) {
             valid = previousState == FacilityState.EvidenceVerified || previousState == FacilityState.Quoted
                 || previousState == FacilityState.Reserved;
         } else if (nextState == FacilityState.Settled) {
-            valid = previousState == FacilityState.Reserved || previousState == FacilityState.Disputed;
+            valid = previousState == FacilityState.EvidenceVerified || previousState == FacilityState.Quoted
+                || previousState == FacilityState.Reserved || previousState == FacilityState.Disputed;
         }
         if (!valid) revert InvalidTransition();
 

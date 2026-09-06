@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { MODEL_VERSION, type FacilityQuote } from "@loomcredit/shared";
-import { type Hex } from "viem";
+import { createPublicClient, defineChain, http, type Hex } from "viem";
 
 import { parseEvidencePacket } from "./evidence.js";
 import { adapterFromEnvironment } from "./model-adapter.js";
@@ -19,6 +19,23 @@ import {
 
 const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const CREDITCOIN_CHAIN_ID = 102031;
+const creditcoinChain = defineChain({
+  id: CREDITCOIN_CHAIN_ID,
+  name: "Creditcoin CC3 Testnet",
+  nativeCurrency: { name: "Creditcoin", symbol: "CTC", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://rpc.cc3-testnet.creditcoin.network"] },
+  },
+});
+const riskGuardAllowlistAbi = [
+  {
+    type: "function",
+    name: "approvedSigners",
+    stateMutability: "view",
+    inputs: [{ name: "signer", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
 
 const usage = `Usage: pnpm --filter @loomcredit/agent quote <evidence-packet.json> [--sign]
 
@@ -176,6 +193,41 @@ async function resolveAgentSignerAddress(): Promise<Hex | undefined> {
   return undefined;
 }
 
+async function assertAgentSignerAllowlisted(
+  riskGuardAddress: Hex,
+  signer: string,
+): Promise<void> {
+  const rpcUrl = optionalEnv("CREDITCOIN_RPC_URL");
+  if (!rpcUrl) {
+    throw new Error(
+      "CONFIG_INVALID: CREDITCOIN_RPC_URL is required to verify the agent signer allowlist before signing",
+    );
+  }
+  const client = createPublicClient({
+    chain: creditcoinChain,
+    transport: http(rpcUrl),
+  });
+  let approved: boolean;
+  try {
+    approved = await client.readContract({
+      address: riskGuardAddress,
+      abi: riskGuardAllowlistAbi,
+      functionName: "approvedSigners",
+      args: [signer as Hex],
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "RPC read failed";
+    throw new Error(
+      `CONFIG_INVALID: unable to verify agent signer allowlist: ${message}`,
+    );
+  }
+  if (!approved) {
+    throw new Error(
+      "CONFIG_INVALID: derived agent signer is not allowlisted by the configured RiskGuard",
+    );
+  }
+}
+
 async function signIfRequested(
   packet: ReturnType<typeof parseEvidencePacket>,
   quote: FacilityQuote,
@@ -231,6 +283,7 @@ async function signIfRequested(
       "CONFIG_INVALID: CREDITCOIN_AGENT_PRIVATE_KEY does not derive the configured allowlisted agent signer",
     );
   }
+  await assertAgentSignerAllowlisted(verifyingContract, signed.signer);
 
   return {
     quote: quoteWithNonce,

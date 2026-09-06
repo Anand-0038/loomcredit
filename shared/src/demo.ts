@@ -17,6 +17,7 @@ export const DEMO_EVIDENCE_PACKET: EvidencePacket = {
   orderValueMinor: 1_000_000,
   guaranteeAmountMinor: 200_000,
   currency: "TEST_USD",
+  deliveryDeadline: DEMO_DELIVERY_DEADLINE,
   tenorDays: 45,
   facilityState: "EVIDENCE_VERIFIED",
   buyerSettlementCount: 8,
@@ -37,7 +38,7 @@ export const DEMO_SAFE_QUOTE: FacilityQuote = {
   decision: "APPROVE",
   advanceBps: 3_000,
   feeBps: 250,
-  expiresAt: DEMO_NOW + 600,
+  expiresAt: DEMO_NOW + 300,
   riskTier: "B",
   reasonCodes: [
     "BUYER_GUARANTEE_VERIFIED",

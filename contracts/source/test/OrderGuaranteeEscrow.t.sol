@@ -81,6 +81,20 @@ contract OrderGuaranteeEscrowTest is TestBase {
         buyer.create(escrow, input);
     }
 
+    function testRejectsZeroIdentityCommitments() public {
+        OrderGuaranteeEscrow.OrderInput memory input = _input(bytes32(uint256(8)));
+        input.buyerIdentityCommitment = bytes32(0);
+
+        vm.expectRevert(OrderGuaranteeEscrow.InvalidIdentityCommitment.selector);
+        buyer.create(escrow, input);
+
+        input = _input(bytes32(uint256(9)));
+        input.supplierIdentityCommitment = bytes32(0);
+
+        vm.expectRevert(OrderGuaranteeEscrow.InvalidIdentityCommitment.selector);
+        buyer.create(escrow, input);
+    }
+
     function testRejectsNonBuyerCancellation() public {
         bytes32 orderId = bytes32(uint256(3));
         buyer.create(escrow, _input(orderId));

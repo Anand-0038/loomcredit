@@ -40,6 +40,25 @@ contract TradeEvidenceUSC {
         uint64 logIndex;
     }
 
+    struct ExpectedCancellation {
+        bytes32 orderId;
+        bytes32 reasonCommitment;
+        uint64 logIndex;
+    }
+
+    struct ExpectedDispute {
+        bytes32 orderId;
+        bytes32 disputeCommitment;
+        uint64 logIndex;
+    }
+
+    struct ExpectedSettlement {
+        bytes32 orderId;
+        uint256 settlementAmount;
+        bytes32 settlementReference;
+        uint64 logIndex;
+    }
+
     address public immutable owner;
     uint64 public immutable sourceChainKey;
     address public immutable sourceEscrow;
@@ -123,6 +142,7 @@ contract TradeEvidenceUSC {
             )
         );
         evidenceId = keccak256(abi.encode(expected.orderId, queryKey));
+        processedQueries[queryKey] = true;
         registry.registerEvidence(
             evidenceId,
             expected.orderId,
@@ -138,53 +158,61 @@ contract TradeEvidenceUSC {
             expected.supplierIdentityCommitment,
             queryKey
         );
-        processedQueries[queryKey] = true;
         emit OrderEvidenceVerified(evidenceId, expected.orderId, queryKey);
     }
 
-    function verifyOrderCancelled(QueryProof calldata proof, bytes32 expectedOrderId, uint64 expectedLogIndex)
+    function verifyOrderCancelled(QueryProof calldata proof, ExpectedCancellation calldata expected)
         external
     {
         (EvmV1Decoder.LogEntry[] memory logs, bytes32 queryKey) =
-            _verifyAndDecode(proof, ORDER_CANCELLED_TOPIC, expectedLogIndex);
-        EvmV1Decoder.LogEntry memory log = _findLog(logs, expectedLogIndex);
+            _verifyAndDecode(proof, ORDER_CANCELLED_TOPIC, expected.logIndex);
+        EvmV1Decoder.LogEntry memory log = _findLog(logs, expected.logIndex);
         if (log.address_ != sourceEscrow) revert EmitterMismatch();
-        if (log.topics.length != 2 || log.topics[1] != expectedOrderId || log.data.length != 32) {
+        if (log.topics.length != 2 || log.topics[1] != expected.orderId || log.data.length != 32) {
             revert EventMismatch();
         }
-        registry.markCancelled(expectedOrderId);
         processedQueries[queryKey] = true;
-        emit LifecycleEvidenceVerified(expectedOrderId, FacilityRegistry.FacilityState.Cancelled, queryKey);
+        bytes32 reasonCommitment = abi.decode(log.data, (bytes32));
+        if (reasonCommitment != expected.reasonCommitment) revert EventMismatch();
+        registry.markCancelled(expected.orderId);
+        emit LifecycleEvidenceVerified(expected.orderId, FacilityRegistry.FacilityState.Cancelled, queryKey);
     }
 
-    function verifyOrderDisputed(QueryProof calldata proof, bytes32 expectedOrderId, uint64 expectedLogIndex)
+    function verifyOrderDisputed(QueryProof calldata proof, ExpectedDispute calldata expected)
         external
     {
         (EvmV1Decoder.LogEntry[] memory logs, bytes32 queryKey) =
-            _verifyAndDecode(proof, ORDER_DISPUTED_TOPIC, expectedLogIndex);
-        EvmV1Decoder.LogEntry memory log = _findLog(logs, expectedLogIndex);
+            _verifyAndDecode(proof, ORDER_DISPUTED_TOPIC, expected.logIndex);
+        EvmV1Decoder.LogEntry memory log = _findLog(logs, expected.logIndex);
         if (log.address_ != sourceEscrow) revert EmitterMismatch();
-        if (log.topics.length != 2 || log.topics[1] != expectedOrderId || log.data.length != 32) {
+        if (log.topics.length != 2 || log.topics[1] != expected.orderId || log.data.length != 32) {
             revert EventMismatch();
         }
-        registry.markDisputed(expectedOrderId);
         processedQueries[queryKey] = true;
-        emit LifecycleEvidenceVerified(expectedOrderId, FacilityRegistry.FacilityState.Disputed, queryKey);
+        bytes32 disputeCommitment = abi.decode(log.data, (bytes32));
+        if (disputeCommitment != expected.disputeCommitment) revert EventMismatch();
+        registry.markDisputed(expected.orderId);
+        emit LifecycleEvidenceVerified(expected.orderId, FacilityRegistry.FacilityState.Disputed, queryKey);
     }
 
-    function verifyOrderSettled(QueryProof calldata proof, bytes32 expectedOrderId, uint64 expectedLogIndex)
+    function verifyOrderSettled(QueryProof calldata proof, ExpectedSettlement calldata expected)
         external
     {
         (EvmV1Decoder.LogEntry[] memory logs, bytes32 queryKey) =
-            _verifyAndDecode(proof, ORDER_SETTLED_TOPIC, expectedLogIndex);
-        EvmV1Decoder.LogEntry memory log = _findLog(logs, expectedLogIndex);
+            _verifyAndDecode(proof, ORDER_SETTLED_TOPIC, expected.logIndex);
+        EvmV1Decoder.LogEntry memory log = _findLog(logs, expected.logIndex);
         if (log.address_ != sourceEscrow) revert EmitterMismatch();
-        if (log.topics.length != 2 || log.topics[1] != expectedOrderId || log.data.length != 64) {
+        if (log.topics.length != 2 || log.topics[1] != expected.orderId || log.data.length != 64) {
             revert EventMismatch();
         }
-        registry.markSettled(expectedOrderId);
         processedQueries[queryKey] = true;
-        emit LifecycleEvidenceVerified(expectedOrderId, FacilityRegistry.FacilityState.Settled, queryKey);
+        (uint256 settlementAmount, bytes32 settlementReference) = abi.decode(log.data, (uint256, bytes32));
+        if (
+            settlementAmount != expected.settlementAmount
+                || settlementReference != expected.settlementReference
+        ) revert EventMismatch();
+        registry.markSettled(expected.orderId);
+        emit LifecycleEvidenceVerified(expected.orderId, FacilityRegistry.FacilityState.Settled, queryKey);
     }
 
     function isProcessed(bytes32 queryKey) external view returns (bool) {

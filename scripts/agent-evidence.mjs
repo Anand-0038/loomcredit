@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { keccak256, toUtf8Bytes } from "ethers";
 
 const MODEL_VERSION = "structured-agent-v1";
+const MAX_FEE_BPS = 1_000;
+const MIN_QUOTE_TTL_SECONDS = 60;
+const MAX_QUOTE_TTL_SECONDS = 300;
 const DECISIONS = new Set(["APPROVE", "REFER", "REJECT"]);
 const RISK_TIERS = new Set(["A", "B", "C", "REFER"]);
 const POLICY_DECISIONS = new Set(["APPROVED", "REJECTED", "REFER"]);
@@ -111,7 +114,12 @@ function requireQuote(artifact, packet) {
     0,
     10_000,
   );
-  const feeBps = requireInteger(quote.feeBps, "quote.feeBps", 0, 10_000);
+  if (decision === "APPROVE" && advanceBps === 0) {
+    throw new Error(
+      "AGENT_EVIDENCE_INVALID: APPROVE quotes must request a positive advance",
+    );
+  }
+  const feeBps = requireInteger(quote.feeBps, "quote.feeBps", 0, MAX_FEE_BPS);
   const expiresAt = requireInteger(quote.expiresAt, "quote.expiresAt", 1);
   const riskTier = requireString(quote.riskTier, "quote.riskTier");
   if (!RISK_TIERS.has(riskTier)) {
@@ -334,6 +342,16 @@ export function summarizeAgentArtifact(
   const quote = requireQuote(input, livePacket);
   if (quote.expiresAt < now) {
     throw new Error("AGENT_EVIDENCE_INVALID: quote has expired");
+  }
+  if (quote.expiresAt < now + MIN_QUOTE_TTL_SECONDS) {
+    throw new Error(
+      `AGENT_EVIDENCE_INVALID: quote expires too soon; minimum TTL is ${MIN_QUOTE_TTL_SECONDS} seconds`,
+    );
+  }
+  if (quote.expiresAt > now + MAX_QUOTE_TTL_SECONDS) {
+    throw new Error(
+      `AGENT_EVIDENCE_INVALID: quote TTL exceeds ${MAX_QUOTE_TTL_SECONDS} seconds`,
+    );
   }
   const policy = requirePolicy(input);
   if (policy.decision === "APPROVED" && quote.decision !== "APPROVE") {

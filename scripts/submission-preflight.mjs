@@ -233,7 +233,15 @@ if (!hasAddress(manifestRiskGuardAddress)) {
   );
 } else {
   try {
-    const provider = new JsonRpcProvider(process.env.CREDITCOIN_RPC_URL);
+    const provider = new JsonRpcProvider(
+      process.env.CREDITCOIN_RPC_URL,
+      102031,
+      { staticNetwork: true },
+    );
+    const chainId = await provider.send("eth_chainId", []);
+    if (chainId.toLowerCase() !== "0x18e8f") {
+      throw new Error("Configured CC3 RPC returned the wrong chain");
+    }
     const bytecode = await provider.getCode(configuredRiskGuardAddress);
     if (bytecode === "0x") {
       add(

@@ -5,9 +5,15 @@ import {
   publicConfig,
 } from "./config.js";
 import { processTransaction } from "./processor.js";
-import { loadStatusServerOptions, startStatusServer } from "./status-server.js";
+import { processLiveProposal } from "./proposal.js";
+import {
+  loadStatusServerOptions,
+  startStatusServer,
+  type IntakeProcessInput,
+} from "./status-server.js";
 import { EventStore } from "./store.js";
 import { SourceEventWatcher } from "./watcher.js";
+import { hydrateRecordedEvidence } from "./recorded-evidence.js";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -42,7 +48,7 @@ async function processTransactionCommand(
   }
 }
 
-async function watchSource(once: boolean): Promise<number> {
+async function watchSource(once: boolean, embedded: boolean): Promise<number> {
   let config;
   try {
     config = loadConfig();
@@ -60,8 +66,33 @@ async function watchSource(once: boolean): Promise<number> {
   const watcher = new SourceEventWatcher(config, store);
   let statusServer: Awaited<ReturnType<typeof startStatusServer>> | undefined;
   try {
-    if (process.env.EVIDENCE_API_EMBEDDED === "true") {
-      statusServer = await startStatusServer(store, loadStatusServerOptions());
+    const recovered = hydrateRecordedEvidence(store, config);
+    if (recovered) {
+      console.log(
+        JSON.stringify({
+          boundary: "RECORDED_EVIDENCE_RECOVERY",
+          status: "hydrated",
+          sourceTxHash: recovered.sourceTxHash,
+          evidenceId: recovered.evidenceId,
+          provenance: recovered.provenance,
+        }),
+      );
+    }
+    if (embedded || process.env.EVIDENCE_API_EMBEDDED === "true") {
+      const processIntake = (input: IntakeProcessInput) =>
+        processTransaction(
+          input.sourceTxHash,
+          config,
+          store,
+          console,
+          undefined,
+          input.expectedOrderId ?? undefined,
+          input.expectedEventType,
+        );
+      statusServer = await startStatusServer(store, loadStatusServerOptions(), {
+        processIntake,
+        processProposal: processLiveProposal,
+      });
       console.log(
         JSON.stringify({
           boundary: "LIVE_EVIDENCE_STATUS_API",
@@ -123,7 +154,7 @@ const exitCode =
     : command === "process-tx"
       ? await processTransactionCommand(argument ?? "")
       : command === "watch"
-        ? await watchSource(argument === "--once")
+        ? await watchSource(argument === "--once", argument === "--embedded")
         : command === "status"
           ? await serveStatus()
           : (console.error(

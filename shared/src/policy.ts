@@ -3,10 +3,12 @@ export const MODEL_VERSION = "structured-agent-v1" as const;
 
 export const POLICY = {
   maxAdvanceBps: 4_000,
+  maxFeeBps: 1_000,
   minGuaranteeBps: 1_000,
   maxTenorDays: 90,
   maxBuyerConcentrationBps: 2_500,
-  quoteTtlSeconds: 600,
+  minQuoteTtlSeconds: 60,
+  quoteTtlSeconds: 300,
 } as const;
 
 export const REASON_CODES = [
@@ -40,6 +42,7 @@ export type PolicyFailureCode =
   | "NON_APPROVAL_DECISION"
   | "ZERO_ADVANCE"
   | "ADVANCE_LIMIT"
+  | "FEE_LIMIT"
   | "GUARANTEE_TOO_LOW"
   | "TENOR_LIMIT"
   | "BUYER_CONCENTRATION"
@@ -70,6 +73,7 @@ export interface QuoteEvaluationInput {
   now: number;
   decision: "APPROVE" | "REFER" | "REJECT";
   advanceBps: number;
+  feeBps: number;
   quoteExpiresAt: number;
   buyerExposureMinor: number;
   portfolioCapacityMinor: number;
@@ -106,9 +110,9 @@ function parseMinorUnits(value: number, field: string): bigint {
   return BigInt(value);
 }
 
-function parseBasisPoints(value: number): bigint {
+function parseBasisPoints(value: number, field: string): bigint {
   if (!Number.isSafeInteger(value) || value < 0 || value > 10_000) {
-    throw new Error("INVALID_INPUT: advanceBps must be between 0 and 10000");
+    throw new Error(`INVALID_INPUT: ${field} must be between 0 and 10000`);
   }
   return BigInt(value);
 }
@@ -155,13 +159,20 @@ export function evaluateQuote(input: QuoteEvaluationInput): PolicyEvaluation {
     input.availableLiquidityMinor,
     "availableLiquidityMinor",
   );
-  const advanceBps = parseBasisPoints(input.advanceBps);
+  const advanceBps = parseBasisPoints(input.advanceBps, "advanceBps");
+  const feeBps = parseBasisPoints(input.feeBps, "feeBps");
   const requestedAdvanceMinorBig = (orderValueMinor * advanceBps) / 10_000n;
   const requestedAdvanceMinor = toSafeNumber(
     requestedAdvanceMinorBig,
     "requestedAdvanceMinor",
   );
-  const tenorDays = Math.ceil((input.deliveryDeadline - input.now) / 86_400);
+  const deadlineDeltaSeconds = input.deliveryDeadline - input.now;
+  // Math.ceil(-1 / 86400) is 0, which would incorrectly pass a deadline
+  // that expired less than a day ago. Keep any past deadline negative so the
+  // off-chain check matches RiskGuard's strict `deadline < block.timestamp`
+  // rejection.
+  const tenorDays =
+    deadlineDeltaSeconds < 0 ? -1 : Math.ceil(deadlineDeltaSeconds / 86_400);
   const buyerLimitMinorBig =
     (portfolioCapacityMinor * BigInt(POLICY.maxBuyerConcentrationBps)) /
     10_000n;
@@ -189,6 +200,14 @@ export function evaluateQuote(input: QuoteEvaluationInput): PolicyEvaluation {
       actual: formatBps(input.advanceBps),
       limit: formatBps(POLICY.maxAdvanceBps),
       failureCode: "ADVANCE_LIMIT",
+    },
+    {
+      id: "fee-cap",
+      label: "Fee cap",
+      status: feeBps <= BigInt(POLICY.maxFeeBps) ? "PASS" : "FAIL",
+      actual: formatBps(input.feeBps),
+      limit: formatBps(POLICY.maxFeeBps),
+      failureCode: "FEE_LIMIT",
     },
     {
       id: "guarantee-ratio",
@@ -226,12 +245,12 @@ export function evaluateQuote(input: QuoteEvaluationInput): PolicyEvaluation {
       id: "quote-ttl",
       label: "Quote expiry",
       status:
-        input.quoteExpiresAt >= input.now &&
+        input.quoteExpiresAt >= input.now + POLICY.minQuoteTtlSeconds &&
         input.quoteExpiresAt <= input.now + POLICY.quoteTtlSeconds
           ? "PASS"
           : "FAIL",
       actual: `${Math.max(0, input.quoteExpiresAt - input.now)} seconds`,
-      limit: `${POLICY.quoteTtlSeconds} seconds`,
+      limit: `${POLICY.minQuoteTtlSeconds}-${POLICY.quoteTtlSeconds} seconds`,
       failureCode: "QUOTE_EXPIRED",
     },
     {
@@ -265,12 +284,9 @@ export function evaluateQuote(input: QuoteEvaluationInput): PolicyEvaluation {
     {
       id: "facility-state",
       label: "Facility state",
-      status:
-        input.state === "EVIDENCE_VERIFIED" || input.state === "QUOTED"
-          ? "PASS"
-          : "FAIL",
+      status: input.state === "EVIDENCE_VERIFIED" ? "PASS" : "FAIL",
       actual: input.state,
-      limit: "evidence verified or quoted",
+      limit: "evidence verified before quote submission",
       failureCode: "INVALID_STATE",
     },
     {

@@ -117,9 +117,9 @@ contract RiskGuardTest is TestBase {
         guard.submitQuote(quote, signature);
     }
 
-    function testRejectsFeeAboveQuoteSchemaMaximum() public {
+    function testRejectsFeeAbovePolicyMaximum() public {
         RiskGuard.FacilityQuote memory quote = _quote(3_000);
-        quote.feeBps = 10_001;
+        quote.feeBps = 1_001;
         bytes memory signature = _signature(quote);
 
         vm.expectRevert(RiskGuard.FeeLimit.selector);

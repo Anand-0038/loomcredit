@@ -3,6 +3,7 @@ import {
   DEMO_SAFE_QUOTE,
   FacilityQuoteSchema,
   MODEL_VERSION,
+  POLICY,
   type EvidencePacket,
   type FacilityQuote,
 } from "@loomcredit/shared";
@@ -86,10 +87,16 @@ export async function generateQuote(
   }
 
   try {
-    const quote = validateQuoteForEvidence(
+    const proposedQuote = validateQuoteForEvidence(
       packet,
       await adapter.generateQuote(packet, now),
     );
+    const quote = {
+      ...proposedQuote,
+      // Provider output cannot choose how long an actionable quote remains
+      // valid. Infrastructure owns freshness so policy and RiskGuard agree.
+      expiresAt: now + POLICY.quoteTtlSeconds,
+    };
     // A model proposal is not yet signer-authorized. The CLI re-evaluates this
     // boundary after an actual signing step succeeds.
     const policy = evaluateAgentQuote(packet, quote, now, "NOT_REQUESTED");
@@ -126,6 +133,7 @@ export function localFixtureQuote(kind: "safe" | "unsafe"): QuoteResult {
         orderValueMinor: 1_000_000,
         guaranteeAmountMinor: 200_000,
         currency: "TEST_USD",
+        deliveryDeadline: DEMO_NOW + 45 * 86_400,
         tenorDays: 45,
         facilityState: "EVIDENCE_VERIFIED",
         buyerSettlementCount: 8,

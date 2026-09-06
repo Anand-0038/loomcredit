@@ -16,10 +16,13 @@ export function evaluateAgentQuote(
   return evaluateQuote({
     orderValueMinor: packet.orderValueMinor,
     guaranteeAmountMinor: packet.guaranteeAmountMinor,
-    deliveryDeadline: now + packet.tenorDays * 86_400,
+    // Preserve the exact source-chain deadline. Reconstructing it from the
+    // packet's rounded tenor would let a recently expired order look fresh.
+    deliveryDeadline: packet.deliveryDeadline,
     now,
     decision: quote.decision,
     advanceBps: quote.advanceBps,
+    feeBps: quote.feeBps,
     quoteExpiresAt: quote.expiresAt,
     buyerExposureMinor: packet.openBuyerExposureMinor,
     portfolioCapacityMinor: packet.vaultTotalLiquidityMinor,

@@ -71,6 +71,12 @@ const EnvironmentSchema = z.object({
   WORKER_START_BLOCK: OptionalNonNegativeIntegerSchema,
   WORKER_CONFIRMATIONS: NonNegativeIntegerSchema.optional().default(2),
   WORKER_POLL_INTERVAL_MS: PollIntervalSchema.optional().default(15_000),
+  RECORDED_EVIDENCE_MANIFEST: OptionalStringSchema.default(
+    "./docs/demo-evidence.json",
+  ),
+  RECORDED_SOURCE_ORDER_MANIFEST: OptionalStringSchema.default(
+    "./docs/deployments/source-order.json",
+  ),
 });
 
 export interface WorkerConfig {
@@ -86,6 +92,8 @@ export interface WorkerConfig {
   workerStartBlock: number | null;
   workerConfirmations: number;
   workerPollIntervalMs: number;
+  recordedEvidenceManifestPath: string;
+  recordedSourceOrderManifestPath: string;
 }
 
 export class ConfigError extends Error {
@@ -215,6 +223,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): WorkerConfig {
     workerStartBlock: parsed.data.WORKER_START_BLOCK ?? null,
     workerConfirmations: parsed.data.WORKER_CONFIRMATIONS,
     workerPollIntervalMs: parsed.data.WORKER_POLL_INTERVAL_MS,
+    recordedEvidenceManifestPath: parsed.data.RECORDED_EVIDENCE_MANIFEST,
+    recordedSourceOrderManifestPath: parsed.data.RECORDED_SOURCE_ORDER_MANIFEST,
   };
 }
 
@@ -234,5 +244,6 @@ export function publicConfig(
     workerStartBlock: config.workerStartBlock ?? "unset",
     workerConfirmations: config.workerConfirmations,
     workerPollIntervalMs: config.workerPollIntervalMs,
+    recordedEvidenceRecoveryConfigured: true,
   };
 }

@@ -14,7 +14,11 @@ import {
   type SubmissionBroadcastHandler,
 } from "./submit.js";
 import type { WorkerConfig } from "./config.js";
-import { EventStore, type CrossChainEvent } from "./store.js";
+import {
+  EventStore,
+  type CrossChainEvent,
+  type SourceOrderDetails,
+} from "./store.js";
 
 export interface ProcessLogger {
   log(...values: unknown[]): void;
@@ -64,6 +68,21 @@ function errorMessage(error: unknown): string {
 
 function isTransactionHash(value: string | undefined): value is string {
   return Boolean(value && /^0x[a-fA-F0-9]{64}$/.test(value));
+}
+
+function sourceOrderDetails(
+  event: SourceInspection["event"],
+): SourceOrderDetails | null {
+  if (event.eventType !== "ORDER_GUARANTEED") return null;
+  return {
+    buyer: event.buyer,
+    supplier: event.supplier,
+    settlementToken: event.settlementToken,
+    orderValueMinor: event.orderValue.toString(),
+    guaranteeAmountMinor: event.guaranteeAmount.toString(),
+    deliveryDeadline: event.deliveryDeadline,
+    nonce: event.nonce,
+  };
 }
 
 export function isTerminalProcessingError(error: unknown): boolean {
@@ -164,6 +183,13 @@ export async function processTransaction(
         logIndex: inspection.event.logIndex,
         sourceEmitter: inspection.event.sourceEmitter,
       });
+    }
+    const verifiedSourceOrder = sourceOrderDetails(inspection.event);
+    if (verifiedSourceOrder && !event.sourceOrder) {
+      event = store.updateSourceOrderDetailsBySourceEventKey(
+        event.sourceEventKey,
+        verifiedSourceOrder,
+      );
     }
     if (event.stage === "VERIFIED") {
       logger.log(

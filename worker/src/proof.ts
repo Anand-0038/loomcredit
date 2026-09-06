@@ -50,6 +50,10 @@ export interface SourceOrderLifecycle {
   txIndex: number;
   logIndex: number;
   orderId: string;
+  reasonCommitment?: string;
+  disputeCommitment?: string;
+  settlementAmount?: bigint;
+  settlementReference?: string;
 }
 
 export type SourceOrderEvent = SourceOrderGuaranteed | SourceOrderLifecycle;
@@ -185,7 +189,7 @@ export function parseSourceEventLog(
     }
     if (receipt.blockNumber === null)
       throw new TerminalWorkerError("Source receipt has no mined block");
-    return {
+    const lifecycle: SourceOrderLifecycle = {
       eventType,
       sourceTxHash: txHash,
       sourceEmitter: log.address,
@@ -194,6 +198,15 @@ export function parseSourceEventLog(
       logIndex: receiptLogIndex,
       orderId,
     };
+    if (eventType === "ORDER_CANCELLED") {
+      lifecycle.reasonCommitment = String(parsed.args[1]);
+    } else if (eventType === "ORDER_DISPUTED") {
+      lifecycle.disputeCommitment = String(parsed.args[1]);
+    } else {
+      lifecycle.settlementAmount = BigInt(parsed.args[1]);
+      lifecycle.settlementReference = String(parsed.args[2]);
+    }
+    return lifecycle;
   }
   throw new TerminalWorkerError(
     `No supported source event from configured escrow in ${txHash}`,

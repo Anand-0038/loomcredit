@@ -8,11 +8,11 @@ import {SandboxCapitalVault} from "./SandboxCapitalVault.sol";
 /// @dev The agent may propose a quote; it cannot bypass these checks or withdraw capital.
 contract RiskGuard {
     uint16 public constant MAX_ADVANCE_BPS = 4_000;
-    uint16 public constant MAX_FEE_BPS = 10_000;
+    uint16 public constant MAX_FEE_BPS = 1_000;
     uint16 public constant MIN_GUARANTEE_BPS = 1_000;
     uint16 public constant MAX_BUYER_CONCENTRATION_BPS = 2_500;
     uint64 public constant MAX_TENOR_DAYS = 90;
-    uint64 public constant QUOTE_TTL_SECONDS = 600;
+    uint64 public constant QUOTE_TTL_SECONDS = 300;
     bytes32 public constant POLICY_VERSION = keccak256("2026-08-demo-v1");
     bytes32 public constant MODEL_VERSION = keccak256("structured-agent-v1");
     bytes32 public constant APPROVE_DECISION = keccak256("APPROVE");

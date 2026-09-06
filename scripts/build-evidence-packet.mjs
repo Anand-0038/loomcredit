@@ -65,14 +65,18 @@ function readVerifiedWorkerEvent(sourceTxHash) {
   try {
     const row = database
       .prepare(
-        "SELECT source_tx_hash, order_id, stage, evidence_id, creditcoin_tx_hash, block_height FROM cross_chain_events WHERE source_tx_hash = ?",
+        "SELECT source_tx_hash, order_id, event_type, stage, evidence_id, creditcoin_tx_hash, block_height, log_index FROM cross_chain_events WHERE lower(source_tx_hash) = lower(?)",
       )
       .get(sourceTxHash);
     if (!row)
       throw new Error(
         `EVIDENCE_INVALID: worker has no row for ${sourceTxHash}`,
       );
-    if (row.stage !== "VERIFIED" || typeof row.evidence_id !== "string") {
+    if (
+      row.event_type !== "ORDER_GUARANTEED" ||
+      row.stage !== "VERIFIED" ||
+      typeof row.evidence_id !== "string"
+    ) {
       throw new Error(
         `EVIDENCE_INVALID: worker row is ${String(row.stage)}; only VERIFIED rows can produce a packet`,
       );
@@ -87,6 +91,8 @@ function readVerifiedWorkerEvent(sourceTxHash) {
       orderId: String(row.order_id),
       evidenceId: String(row.evidence_id),
       creditcoinTxHash: String(row.creditcoin_tx_hash),
+      blockHeight: row.block_height === null ? null : Number(row.block_height),
+      logIndex: Number(row.log_index),
     };
   } finally {
     database.close();
@@ -95,13 +101,30 @@ function readVerifiedWorkerEvent(sourceTxHash) {
 
 async function main() {
   const packetOnly = process.argv.includes("--packet-only");
-  const sourceManifest = await loadManifest(
-    "docs/deployments/source-order.json",
-  );
+  const sourceTxHashArgumentIndex = process.argv.indexOf("--source-tx-hash");
+  const sourceTxHashArgument =
+    sourceTxHashArgumentIndex >= 0
+      ? process.argv[sourceTxHashArgumentIndex + 1]
+      : undefined;
+  if (
+    sourceTxHashArgumentIndex >= 0 &&
+    (typeof sourceTxHashArgument !== "string" ||
+      !/^0x[a-fA-F0-9]{64}$/.test(sourceTxHashArgument))
+  ) {
+    throw new Error(
+      "INPUT_INVALID: --source-tx-hash must be a 32-byte transaction hash",
+    );
+  }
+  let sourceManifest = null;
+  try {
+    sourceManifest = await loadManifest("docs/deployments/source-order.json");
+  } catch (error) {
+    if (!sourceTxHashArgument) throw error;
+  }
   const creditcoinManifest = await loadManifest(
     "docs/deployments/creditcoin-deployment.json",
   );
-  const sourceTxHash = sourceManifest.transactionHash;
+  const sourceTxHash = sourceTxHashArgument ?? sourceManifest?.transactionHash;
   if (typeof sourceTxHash !== "string") {
     throw new Error(
       "EVIDENCE_INVALID: source order manifest has no transaction hash",
@@ -109,8 +132,9 @@ async function main() {
   }
   const workerEvent = readVerifiedWorkerEvent(sourceTxHash);
   if (
+    sourceManifest?.order?.orderId &&
     workerEvent.orderId.toLowerCase() !==
-    sourceManifest.order.orderId.toLowerCase()
+      sourceManifest.order.orderId.toLowerCase()
   ) {
     throw new Error(
       "EVIDENCE_INVALID: worker order ID does not match source manifest",
@@ -174,13 +198,13 @@ async function main() {
       String(evidenceLog.args[0]).toLowerCase() !==
         workerEvent.evidenceId.toLowerCase() ||
       String(evidenceLog.args[1]).toLowerCase() !==
-        sourceManifest.order.orderId.toLowerCase()
+        workerEvent.orderId.toLowerCase()
     ) {
       throw new Error(
         "EVIDENCE_INVALID: Creditcoin receipt does not contain the expected evidence event",
       );
     }
-    const evidence = await registry.getEvidence(sourceManifest.order.orderId);
+    const evidence = await registry.getEvidence(workerEvent.orderId);
     if (
       String(evidence.evidenceId).toLowerCase() !==
       workerEvent.evidenceId.toLowerCase()
@@ -191,7 +215,7 @@ async function main() {
     }
     if (
       String(evidence.orderId).toLowerCase() !==
-      sourceManifest.order.orderId.toLowerCase()
+      workerEvent.orderId.toLowerCase()
     ) {
       throw new Error(
         "EVIDENCE_INVALID: registry order ID does not match source manifest",
@@ -219,6 +243,7 @@ async function main() {
         "guaranteeAmount",
       ),
       currency: "TEST_USD",
+      deliveryDeadline,
       tenorDays: Math.max(0, Math.ceil((deliveryDeadline - now) / 86_400)),
       facilityState: state,
       buyerSettlementCount: 0,
@@ -256,9 +281,12 @@ async function main() {
               packet,
               source: {
                 transactionHash: sourceTxHash,
-                blockNumber: sourceManifest.blockNumber,
-                logIndex: sourceManifest.logIndex,
-                escrow: sourceManifest.sourceEscrow,
+                blockNumber:
+                  workerEvent.blockHeight ??
+                  sourceManifest?.blockNumber ??
+                  null,
+                logIndex: workerEvent.logIndex,
+                escrow: sourceManifest?.sourceEscrow ?? null,
               },
               creditcoin: {
                 verificationTransactionHash: workerEvent.creditcoinTxHash,

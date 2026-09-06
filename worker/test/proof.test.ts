@@ -65,15 +65,29 @@ describe("source proof event indexing", () => {
       ],
     } as unknown as TransactionReceipt;
 
-    expect(
-      parseSourceEventLog(
-        sourceTxHash,
-        sourceEscrowAddress,
-        receipt,
-        orderId,
-        eventType,
-      ),
-    ).toMatchObject({ eventType, orderId, logIndex: 0 });
+    const parsed = parseSourceEventLog(
+      sourceTxHash,
+      sourceEscrowAddress,
+      receipt,
+      orderId,
+      eventType,
+    );
+
+    expect(parsed).toMatchObject({ eventType, orderId, logIndex: 0 });
+    if (eventType === "ORDER_CANCELLED") {
+      expect(parsed).toMatchObject({
+        reasonCommitment: "0x" + "55".repeat(32),
+      });
+    } else if (eventType === "ORDER_DISPUTED") {
+      expect(parsed).toMatchObject({
+        disputeCommitment: "0x" + "55".repeat(32),
+      });
+    } else {
+      expect(parsed).toMatchObject({
+        settlementAmount: 1_000n,
+        settlementReference: "0x" + "55".repeat(32),
+      });
+    }
   });
 
   it("uses the receipt-local position rather than ethers Log.index", () => {

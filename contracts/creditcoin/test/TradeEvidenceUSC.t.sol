@@ -167,10 +167,16 @@ contract TradeEvidenceUSCTest is TestBase {
         bytes32 orderId = bytes32(uint256(5));
         usc.verifyOrderGuaranteed(_proof(_encodedTransaction(orderId, ESCROW, 1), 104), _expected(orderId));
 
+        bytes32 reasonCommitment = bytes32(uint256(99));
         bytes memory encodedCancellation = _encodedLifecycleTransaction(
-            orderId, keccak256("OrderCancelled(bytes32,bytes32)"), abi.encode(bytes32(uint256(99)))
+            orderId, keccak256("OrderCancelled(bytes32,bytes32)"), abi.encode(reasonCommitment)
         );
-        usc.verifyOrderCancelled(_proof(encodedCancellation, 105), orderId, 0);
+        usc.verifyOrderCancelled(
+            _proof(encodedCancellation, 105),
+            TradeEvidenceUSC.ExpectedCancellation({
+                orderId: orderId, reasonCommitment: reasonCommitment, logIndex: 0
+            })
+        );
 
         FacilityRegistry.TradeEvidence memory evidence = registry.getEvidence(orderId);
         assertEq(uint256(evidence.state), uint256(FacilityRegistry.FacilityState.Cancelled));
@@ -178,21 +184,78 @@ contract TradeEvidenceUSCTest is TestBase {
 
     function testLifecycleReplayPreventsRetryOnlyAfterSuccess() public {
         bytes32 orderId = bytes32(uint256(6));
+        bytes32 reasonCommitment = bytes32(uint256(99));
         bytes memory encodedCancellation = _encodedLifecycleTransaction(
-            orderId, keccak256("OrderCancelled(bytes32,bytes32)"), abi.encode(bytes32(uint256(99)))
+            orderId, keccak256("OrderCancelled(bytes32,bytes32)"), abi.encode(reasonCommitment)
         );
         TradeEvidenceUSC.QueryProof memory proof = _proof(encodedCancellation, 106);
         bytes32 queryKey = keccak256(abi.encode(uint64(1), uint64(106), uint64(7), uint64(0), ESCROW));
 
         vm.expectRevert(FacilityRegistry.UnknownOrder.selector);
-        usc.verifyOrderCancelled(proof, orderId, 0);
+        usc.verifyOrderCancelled(
+            proof,
+            TradeEvidenceUSC.ExpectedCancellation({
+                orderId: orderId, reasonCommitment: reasonCommitment, logIndex: 0
+            })
+        );
         assertTrue(!usc.isProcessed(queryKey));
 
         usc.verifyOrderGuaranteed(_proof(_encodedTransaction(orderId, ESCROW, 1), 107), _expected(orderId));
-        usc.verifyOrderCancelled(proof, orderId, 0);
+        usc.verifyOrderCancelled(
+            proof,
+            TradeEvidenceUSC.ExpectedCancellation({
+                orderId: orderId, reasonCommitment: reasonCommitment, logIndex: 0
+            })
+        );
         assertTrue(usc.isProcessed(queryKey));
 
         vm.expectRevert(TradeEvidenceUSC.QueryProcessed.selector);
-        usc.verifyOrderCancelled(proof, orderId, 0);
+        usc.verifyOrderCancelled(
+            proof,
+            TradeEvidenceUSC.ExpectedCancellation({
+                orderId: orderId, reasonCommitment: reasonCommitment, logIndex: 0
+            })
+        );
+    }
+
+    function testRejectsLifecyclePayloadMismatch() public {
+        bytes32 orderId = bytes32(uint256(7));
+        usc.verifyOrderGuaranteed(_proof(_encodedTransaction(orderId, ESCROW, 1), 108), _expected(orderId));
+
+        bytes memory encodedDispute = _encodedLifecycleTransaction(
+            orderId, keccak256("OrderDisputed(bytes32,bytes32)"), abi.encode(bytes32(uint256(77)))
+        );
+        vm.expectRevert(TradeEvidenceUSC.EventMismatch.selector);
+        usc.verifyOrderDisputed(
+            _proof(encodedDispute, 109),
+            TradeEvidenceUSC.ExpectedDispute({
+                orderId: orderId, disputeCommitment: bytes32(uint256(78)), logIndex: 0
+            })
+        );
+    }
+
+    function testRegistersSettlementDirectlyFromEvidenceVerified() public {
+        bytes32 orderId = bytes32(uint256(8));
+        usc.verifyOrderGuaranteed(_proof(_encodedTransaction(orderId, ESCROW, 1), 110), _expected(orderId));
+
+        uint256 settlementAmount = 123_456;
+        bytes32 settlementReference = bytes32(uint256(88));
+        bytes memory encodedSettlement = _encodedLifecycleTransaction(
+            orderId,
+            keccak256("OrderSettled(bytes32,uint256,bytes32)"),
+            abi.encode(settlementAmount, settlementReference)
+        );
+        usc.verifyOrderSettled(
+            _proof(encodedSettlement, 111),
+            TradeEvidenceUSC.ExpectedSettlement({
+                orderId: orderId,
+                settlementAmount: settlementAmount,
+                settlementReference: settlementReference,
+                logIndex: 0
+            })
+        );
+
+        FacilityRegistry.TradeEvidence memory evidence = registry.getEvidence(orderId);
+        assertEq(uint256(evidence.state), uint256(FacilityRegistry.FacilityState.Settled));
     }
 }
